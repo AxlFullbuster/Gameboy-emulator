@@ -15,8 +15,8 @@ void Gameboy::initialize(){
         memory[i] = 0;
     }
     
-    pc = 0x100;
-    sp = 0xFFFE;
+    PC.full = 0x100;
+    SP.full = 0xFFFE;
     AF.full = 0x01B0;
     BC.full = 0x0013;
     DE.full = 0x00D8;
@@ -59,11 +59,11 @@ void Gameboy::emuLoop(){
 }
 
 void Gameboy::emulateCycle(){
-    opcode = read(pc);
+    opcode = read(PC.full);
     if(opcode != 0xCB){
         decode1(opcode);
     } else {
-        opcode = read(pc++);
+        opcode = read(PC.full++);
         decode2(opcode);
     }
 }
@@ -158,4 +158,123 @@ void Gameboy::write(uint16_t address, uint8_t data){
 void Gameboy::loadGame(){
     //load game into emulator
 }
+
+void Gameboy::op_8bit_load_registers(uint8_t r1, uint8_t r2){
+    r1 = r2;
+}
+
+void Gameboy::op_8bit_load_immediate(uint8_t r, uint8_t n){
+    n = r;
+}
+
+ void Gameboy::op_8bit_load_into_A(uint8_t n){
+    AF.high = n;
+ }
+ 
+ void Gameboy::op_8bit_load_into_immediate(uint8_t n){
+    n = AF.high;
+ }
+ 
+ void Gameboy::op_16bit_load_into_A(uint8_t nn){
+    AF.high = nn;
+ }
+ 
+ void Gameboy::op_16bit_load_A_into_immediate(uint8_t nn){
+    nn = AF.high;
+ }
+ 
+ void Gameboy::op_16bit_load(uint16_t dd, uint16_t nn){
+    dd = nn;
+ }
+ 
+ void Gameboy::op_16bit_load_into_sp(uint16_t nn){
+    SP.low = nn;
+    SP.high = nn++;
+ }
+ 
+ void Gameboy::op_8bit_add_register(uint8_t r){
+    AF.high += r;
+ }
+ 
+ void Gameboy::op_8bit_add_immediate(uint8_t n){
+    AF.high += n;
+ }
+ 
+ void Gameboy::op_8bit_add_carry(uint8_t s){
+    if(AF.high + s > 0xFF){
+        AF.low |= 4;
+        AF.high += s++;
+        if( (AF.high + s) == 0){
+            AF.low |= 7;
+        }
+        if(((AF.high & 0xf) + (s & 0xf)) & 0x10 == 0x10){
+            AF.low |= 5;
+        }
+    }else {
+        AF.high += s;
+        if( (AF.high + s) == 0){
+            AF.low |= 7;
+        }
+        if(((AF.high & 0xf) + (s & 0xf)) & 0x10 == 0x10){
+            AF.low |= 5;
+        }
+    }
+ }
+ 
+ void Gameboy::op_8bit_subtract(uint8_t s){
+        AF.low |= 6;
+        AF.high -= s;
+        if( (AF.high - s) == 0){
+            AF.low |= 7;
+        }
+        if(((AF.high & 0xf) + (s & 0xf)) & 0x10 == 0x10){
+            AF.low |= 5;
+        }
+ }
+ 
+ void Gameboy::op_8bit_subtract_carry(uint8_t s){
+    AF.low |= 6;
+    if(AF.high - s > 0xFF){
+        AF.low |= 4;
+        AF.high -= s++;
+        if( (AF.high - s) == 0){
+            AF.low |= 7;
+        }
+        if(((AF.high & 0xf) - (s & 0xf)) & 0x10 == 0x10){
+            AF.low |= 5;
+        }
+    }else {
+        AF.high -= s;
+        if( (AF.high - s) == 0){
+            AF.low |= 7;
+        }
+        if(((AF.high & 0xf) - (s & 0xf)) & 0x10 == 0x10){
+            AF.low |= 5;
+        }
+    }
+ }
+ 
+ void Gameboy::op_8bit_and(uint8_t s){
+    AF.high &= s;
+ }
+ 
+ void Gameboy::op_8bit_or(uint8_t s){
+    AF.high |= s;
+ }
+ 
+ void Gameboy::op_8bit_xor(uint8_t s){
+    AF.high ^= s;
+ }
+ 
+ void Gameboy::op_8bit_compare(uint8_t s){
+    if( (AF.high - s) == 0){
+            AF.low |= 7;
+    } 
+ }
+ 
+ void Gameboy::op_16bit_add_to_hl(uint16_t ss){
+    HL.full += ss;
+ }
+ 
+ 
 
