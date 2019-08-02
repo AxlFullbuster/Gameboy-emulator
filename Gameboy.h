@@ -3,9 +3,11 @@
 
 #include<stdint.h>
 
+
 class Gameboy{
     private:
         uint8_t opcode;
+        uint16_t pc;
         int cycles;
         
         uint8_t memory[65536];
@@ -25,7 +27,6 @@ class Gameboy{
         Register DE;
         Register HL;
         Register SP;
-        Register PC;
         
         void initialize();
         void emulateCycle();
@@ -34,20 +35,20 @@ class Gameboy{
         uint8_t read(uint16_t address);
         void write(uint16_t address, uint8_t data);
         
-        //opcode functions (I'll try and find better names for them)
-        void op_8bit_load_registers(uint8_t r1, uint8_t r2);
-        void op_8bit_load_immediate(uint8_t r, uint8_t n);
-        void op_8bit_load_into_A(uint8_t n);
-        void op_8bit_load_into_immediate(uint8_t n);
-        void op_16bit_load_into_A(uint8_t nn);
-        void op_16bit_load_A_into_immediate(uint8_t nn);
-        void op_16bit_load(uint16_t dd, uint16_t nn);
-        void op_16bit_load_into_sp(uint16_t nn);
-        void op_8bit_add_register(uint8_t r);
-        void op_8bit_add_immediate(uint8_t n);
+        bool carrying;
+        bool setZ;    bool unsetZ;
+        bool setN;    bool unsetN;
+        bool setH;    bool unsetH;
+        bool setC;    bool unsetC;
+        
+        
+       
+        //opcode functions
+        void flags();
+        void op_8bit_load(uint8_t r1, uint8_t r2);
+        void op_16bit_load(Register dd, uint16_t nn);
+        void op_8bit_add(uint8_t v);
         void op_8bit_subtract(uint8_t s);
-        void op_8bit_add_carry(uint8_t s);
-        void op_8bit_subtract_carry(uint8_t s);
         void op_8bit_and(uint8_t s);
         void op_8bit_or(uint8_t s);
         void op_8bit_xor(uint8_t s);
