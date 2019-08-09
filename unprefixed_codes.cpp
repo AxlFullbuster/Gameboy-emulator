@@ -4,18 +4,19 @@ void Gameboy::decode1(uint8_t opcode){
     switch(opcode){
         case 0x00: // NOP 
             cycles += 4;
+            PC.full++;
         break;
     
         case 0x01: // LD BC u16 
-            op_16bit_load(BC, read(pc));
+            op_16bit_load(BC, read(PC.full));
             cycles += 12;
-            pc += 2;
+            PC.full += 2;
         break;
     
         case 0x02: // LD (BC) A 
             write(BC.full, AF.high);
             cycles += 8;
-            pc++;
+            PC.full++;
         break;
     
         case 0x03: //INC BC
@@ -25,26 +26,55 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x04: //INC B
             BC.high++;
-            unsetN = true;
-            if(BC.high == 0) setZ = true;
+            unset_flag(6);
+            if(BC.high == 0) set_flag(7);
             if(((BC.high & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
         break;
     
         case 0x05: //DEC B
             BC.high--;
-            setN = true;
-            if(BC.high == 0) setZ = true;
+            set_flag(6);
+            if(BC.high == 0) set_flag(7);
             if(((BC.high & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
             
-            flags();
             cycles += 4;
+        break;
+    
+        case 0x06: // LD B u8
+            op_8bit_load(BC.high, read(PC.full));
+            PC.full++;
+            cycles += 8;
+        break;
+    
+        case 0x07: //RLCA
+            left = true;
+            op_rotate(AF.high);
+            cycles += 4;
+        break;
+    
+        case 0x08:{ //LD (u16) SP
+            Register nn;
+            nn.low = read(PC.full);
+            nn.high = read(PC.full++);
+            nn.full = SP.full;
+            cycles += 20;
+            PC.full += 2;
+        }
+        break;
+    
+        case 0x09: //ADD HL BC
+            op_16bit_add_to_hl(BC.full);
+            cycles += 8;
+        break;
+    
+        case 0x0A: //LD A (BC)
+            op_8bit_load(AF.high, read(BC.full));
+            cycles += 8;
         break;
     
         case 0x0B: //DEC BC
@@ -54,32 +84,50 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x0C: //INC C
             BC.low++;
-            unsetN = true;
-            if(BC.low == 0) setZ = true;
+            unset_flag(6);
+            if(BC.low == 0) set_flag(7);
             if(((BC.low & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
         break;
     
         case 0x0D: //DEC C
             BC.low--;
-            setN = true;
-            if(BC.low == 0) setZ = true;
+            set_flag(6);
+            if(BC.low == 0) set_flag(7);
             if(((BC.low & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
             
-            flags();
             cycles += 4;
+        break;
+    
+        case 0x0E: //LD C u8
+            op_8bit_load(BC.low, read(PC.full));
+            PC.full++;
+            cycles += 8;
+        break;
+    
+        case 0x0F: //RRCA
+            op_rotate(AF.high);
+            cycles += 4;
+        break;
+    
+        case 0x10: //STOP
+            halt = true;
+        break;
+    
+        case 0x11: //LD DE u16
+            op_16bit_load(DE, read(PC.full));
+            PC.full += 2;
+            cycles += 12;
         break;
     
         case 0x12: // LD (DE) A
             write(DE.full, AF.high);
             cycles += 8;
-            pc++;
+            PC.full++;
         break;
     
         case 0x13: //INC DE
@@ -89,26 +137,49 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x14: //INC D
             DE.high++;
-            unsetN = true;
-            if(DE.high == 0) setZ = true;
+            unset_flag(6);
+            if(DE.high == 0) set_flag(7);
             if(((DE.high & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
         break;
     
         case 0x15: //DEC D
             DE.high--;
-            setN = true;
-            if(DE.high == 0) setZ = true;
+            set_flag(6);
+            if(DE.high == 0) set_flag(7);
             if(((DE.high & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
+        break;
+    
+        case 0x16: //LD D u8
+            op_8bit_load(DE.high, read(PC.full));
+            PC.full++;
+            cycles += 8;
+        break;
+    
+        case 0x17: //RLA
+            left = true;
+            op_rotate(AF.high);
+            cycles += 4;
+        break;
+    
+        case 0x18: //JR i8
+            op_jump_signed(read(PC.full));
+            cycles += 12;
+        break;
+    
+        case 0x19: //ADD HL DE
+            op_16bit_add_to_hl(DE.full);
+            cycles += 8;
+        break;
+    
+        case 0x1A: //LD A (DE)
+            op_8bit_load(AF.high, read(DE.full));
+            cycles += 8;
         break;
     
         case 0x1B: //DEC DE
@@ -118,33 +189,51 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x1C: //INC E
             DE.low++;
-            unsetN = true;
-            if(DE.low == 0) setZ = true;
+            unset_flag(6);
+            if(DE.low == 0) set_flag(7);
             if(((DE.low & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
         break;
     
         case 0x1D: //DEC E
             DE.low--;
-            setN = true;
-            if(DE.low == 0) setZ = true;
+            set_flag(6);
+            if(DE.low == 0) set_flag(7);
             if(((DE.low & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
+        break;
+    
+        case 0x1E: //LD E u8
+            op_8bit_load(DE.low, read(PC.full));
+            PC.full++;
+            cycles += 8;
+        break;
+    
+        case 0x1F: //RRA
+            right = true;
+            op_rotate(AF.high);
+            cycles += 4;
+        break;
+    
+        case 0x21: //JR NZ i8
+            if(!check_flag(7)){
+                op_jump_signed(read(PC.full));
+                cycles += 12;
+            }else{
+                cycles += 8;
+                PC.full++;
+            }
         break;
     
         case 0x22: // LD (HL+) A 
             write(HL.full, AF.high);
             HL.full++;
             cycles += 8;
-            pc++;
+            PC.full++;
         break;
     
         case 0x23: //INC HL
@@ -154,26 +243,54 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x24: //INC H
             HL.high++;
-            unsetN = true;
-            if(HL.high == 0) setZ = true;
+            unset_flag(6);
+            if(HL.high == 0) set_flag(7);
             if(((HL.high & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
         break;
     
         case 0x25: //DEC H
             HL.high--;
-            setN = true;
-            if(HL.high == 0) setZ = true;
+            set_flag(6);
+            if(HL.high == 0) set_flag(7);
             if(((HL.high & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
+        break;
+    
+        case 0x26: //LD H u8
+            op_8bit_load(HL.high, read(PC.full));
+            cycles += 8;
+            PC.full++;
+        break;
+    
+        case 0x27: //DAA
+            op_DAA();
+            cycles += 4;
+        break;
+    
+        case 0x28: //JR Z i8
+            if(check_flag(7)){
+                cycles += 12;
+                op_jump_signed(read(PC.full));
+            }else{
+                cycles += 8;
+                PC.full++;
+            }
+        break;
+    
+        case 0x29: //ADD HL HL
+            op_16bit_add_to_hl(HL.full);
+            cycles += 8;
+        break;
+    
+        case 0x2A: //LD A (HL+)
+            op_8bit_load(AF.high, read(HL.full));
+            HL.full++;
+            cycles += 8;
         break;
     
         case 0x2B: //DEC HL
@@ -183,33 +300,60 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x2C: //INC L
             HL.low++;
-            unsetN = true;
-            if(HL.low == 0) setZ = true;
+            unset_flag(6);
+            if(HL.low == 0) set_flag(7);
             if(((HL.low & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(7);
             }
-            
-            flags();
             cycles += 4;
         break;
     
         case 0x2D: //DEC L
             HL.low--;
-            setN = true;
-            if(HL.low == 0) setZ = true;
+            set_flag(6);
+            if(HL.low == 0) set_flag(7);
             if(((HL.low & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
+        break;
+    
+        case 0x2E: //LD L u8
+            op_8bit_load(HL.low, read(PC.full));
+            cycles += 8;
+            PC.full++;
+        break;
+    
+        case 0x2F: //CPL
+            op_cpl();
+            cycles += 4;
+        break;
+    
+        case 0x30: //JR NC i8
+            if(!check_flag(4)){
+                cycles += 12;
+                op_jump_signed(read(PC.full));
+            }else{
+                cycles += 8;
+                PC.full++;
+            }
+        break;
+    
+        case 0x31:{ //LD SP u16
+            Register u16;
+            u16.low = PC.full++;
+            u16.high = PC.full += 2;
+            op_16bit_load(SP, read(u16.full));
+            cycles += 12;
+            PC.full += 2;
+        }
         break;
     
         case 0x32: // LD (HL-) A
             write(HL.full, AF.high);
             HL.full--;
             cycles += 8;
-            pc++;
+            PC.full++;
         break;
     
         case 0x33: //INC SP
@@ -220,13 +364,11 @@ void Gameboy::decode1(uint8_t opcode){
         case 0x34:{ //INC (HL)
             uint8_t val = read(HL.full);
             val++;
-            unsetN = true;
-            if(val == 0) setZ = true;
+            unset_flag(6);
+            if(val == 0) set_flag(7);
             if(((val & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 12;
         }
         break;
@@ -234,15 +376,45 @@ void Gameboy::decode1(uint8_t opcode){
         case 0x35:{ //DEC (HL)
             uint8_t val = read(HL.full);
             val--;
-            setN = true;
-            if(val == 0) setZ = true;
+            set_flag(6);
+            if(val == 0) set_flag(7);
             if(((val & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 12;
         }
+        break;
+    
+        case 0x36: // LD (HL) u8
+            write(HL.full, read(PC.full));
+            cycles += 12;
+            PC.full++;
+        break;
+    
+        case 0x37: //SCF
+            set_flag(4);
+            cycles += 4;
+        break;
+    
+        case 0x38: //JR C i8
+            if(check_flag(4)){
+                cycles += 12;
+                op_jump_signed(read(PC.full));
+            }else{
+                cycles += 8;
+                PC.full++;
+            }
+        break;
+    
+        case 0x39: //ADD HL SP
+            op_16bit_add_to_hl(SP.full);
+            cycles += 8;
+        break;
+    
+        case 0x3A: //LD A (HL-)
+            op_8bit_load(AF.high, read(HL.full));
+            HL.full--;
+            cycles += 8;
         break;
     
         case 0x3B: //DEC SP
@@ -252,28 +424,35 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x3C: //INC A
             AF.high++;
-            unsetN = true;
-            if(AF.high == 0) setZ = true;
+            unset_flag(6);
+            if(AF.high == 0) set_flag(7);
             if(((AF.high & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
         break;
     
         case 0x3D: //DEC A
             BC.high--;
-            setN = true;
-            if(AF.high == 0) setZ = true;
+            set_flag(6);
+            if(AF.high == 0) set_flag(7);
             if(((AF.high & 0xf) & 0x10) == 0x10){
-                setH = true;
+                set_flag(5);
             }
-            
-            flags();
             cycles += 4;
         break;
     
+        case 0x3E: //LD A u8
+            op_8bit_load(AF.high, read(PC.full));
+            cycles += 8;
+            PC.full++;
+        break;
+    
+        case 0x3F: // CCF
+            flip_flag(4);
+            cycles += 4;
+        break;
+            
         case 0x40: // LD B B
             op_8bit_load(BC.high, BC.high);
             cycles += 4;
@@ -304,94 +483,14 @@ void Gameboy::decode1(uint8_t opcode){
             cycles += 4;
         break;
     
-        case 0x50: // LD D B
-            op_8bit_load(DE.high, BC.high);
-            cycles += 4;
-        break;
-    
-        case 0x51: // LD D C
-            op_8bit_load(DE.high, BC.low);
-            cycles += 4;
-        break;
-    
-        case 0x52: // LD D D
-            op_8bit_load(DE.high, DE.high);
-            cycles += 4;
-        break;
-    
-        case 0x53: // LD D E
-            op_8bit_load(DE.high, DE.low);
-            cycles += 4;
-        break;
-    
-        case 0x54: // LD D H
-            op_8bit_load(DE.high, HL.high);
-            cycles += 4;
-        break;
-    
-        case 0x55: // LD D L
-            op_8bit_load(DE.high, HL.low);
-            cycles += 4;
-        break;
-    
-        case 0x60: // LD H B
-            op_8bit_load(HL.high, BC.high);
-            cycles += 4;
-        break;
-    
-        case 0x61: // LD H C
-            op_8bit_load(HL.high, BC.low);
-            cycles += 4;
-        break;
-    
-        case 0x62: // LD H D
-            op_8bit_load(HL.high, DE.high);
-            cycles += 4;
-        break;
-    
-        case 0x63: // LD H E
-            op_8bit_load(HL.high, DE.low);
-            cycles += 4;
-        break;
-    
-        case 0x64: // LD H H
-            op_8bit_load(HL.high, HL.high);
-            cycles += 4;
-        break;
-    
-        case 0x65: // LD H L
-            op_8bit_load(HL.high, HL.low);
-            cycles += 4;
-        break;
-    
-        case 0x70: // LD (HL) B
-            write(HL.full, BC.high);
+        case 0x46: //LD B (HL)
+            op_8bit_load(BC.high, read(HL.full));
             cycles += 8;
         break;
     
-        case 0x71: // LD (HL) C
-            write(HL.full, BC.low);
-            cycles += 8;
-        break;
-    
-        case 0x72: // LD (HL) D
-            write(HL.full, DE.high);
-            cycles += 8;
-        break;
-    
-        case 0x73: // LD (HL) E
-            write(HL.full, DE.low);
-            cycles += 8;
-        break;
-    
-        case 0x74: // LD (HL) H
-            write(HL.full, HL.high);
-            cycles += 8;
-        break;
-    
-        case 0x75: // LD (HL) L
-            write(HL.full, HL.low);
-            cycles += 8;
+        case 0x47: //LD B A
+            op_8bit_load(BC.high, AF.high);
+            cycles += 4;
         break;
     
         case 0x48: // LD C B
@@ -433,6 +532,46 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x4F: // LD C A
             op_8bit_load(BC.low, AF.high);
+            cycles += 4;
+        break;
+    
+        case 0x50: // LD D B
+            op_8bit_load(DE.high, BC.high);
+            cycles += 4;
+        break;
+    
+        case 0x51: // LD D C
+            op_8bit_load(DE.high, BC.low);
+            cycles += 4;
+        break;
+    
+        case 0x52: // LD D D
+            op_8bit_load(DE.high, DE.high);
+            cycles += 4;
+        break;
+    
+        case 0x53: // LD D E
+            op_8bit_load(DE.high, DE.low);
+            cycles += 4;
+        break;
+    
+        case 0x54: // LD D H
+            op_8bit_load(DE.high, HL.high);
+            cycles += 4;
+        break;
+    
+        case 0x55: // LD D L
+            op_8bit_load(DE.high, HL.low);
+            cycles += 4;
+        break;
+    
+        case 0x56: //LD D (HL)
+            op_8bit_load(DE.high, read(HL.full));
+            cycles += 8;
+        break;
+    
+        case 0x57: //LD D A
+            op_8bit_load(DE.high, AF.high);
             cycles += 4;
         break;
     
@@ -478,7 +617,47 @@ void Gameboy::decode1(uint8_t opcode){
             cycles += 4;
         break;
     
-         case 0x68: // LD L B
+        case 0x60: // LD H B
+            op_8bit_load(HL.high, BC.high);
+            cycles += 4;
+        break;
+    
+        case 0x61: // LD H C
+            op_8bit_load(HL.high, BC.low);
+            cycles += 4;
+        break;
+    
+        case 0x62: // LD H D
+            op_8bit_load(HL.high, DE.high);
+            cycles += 4;
+        break;
+    
+        case 0x63: // LD H E
+            op_8bit_load(HL.high, DE.low);
+            cycles += 4;
+        break;
+    
+        case 0x64: // LD H H
+            op_8bit_load(HL.high, HL.high);
+            cycles += 4;
+        break;
+    
+        case 0x65: // LD H L
+            op_8bit_load(HL.high, HL.low);
+            cycles += 4;
+        break;
+    
+        case 0x66: //LD H (HL)
+            op_8bit_load(HL.high, read(HL.full));
+            cycles += 8;
+        break;
+    
+        case 0x67: //LD HL A
+            op_8bit_load(HL.high, AF.high);
+            cycles += 4;
+        break;
+    
+        case 0x68: // LD L B
             op_8bit_load(HL.low, BC.high);
             cycles += 4;
         break;
@@ -518,6 +697,45 @@ void Gameboy::decode1(uint8_t opcode){
         case 0x6F: // LD L A
             op_8bit_load(HL.low, AF.high);
             cycles += 4;
+        break;
+    
+        case 0x70: // LD (HL) B
+            write(HL.full, BC.high);
+            cycles += 8;
+        break;
+    
+        case 0x71: // LD (HL) C
+            write(HL.full, BC.low);
+            cycles += 8;
+        break;
+    
+        case 0x72: // LD (HL) D
+            write(HL.full, DE.high);
+            cycles += 8;
+        break;
+    
+        case 0x73: // LD (HL) E
+            write(HL.full, DE.low);
+            cycles += 8;
+        break;
+    
+        case 0x74: // LD (HL) H
+            write(HL.full, HL.high);
+            cycles += 8;
+        break;
+    
+        case 0x75: // LD (HL) L
+            write(HL.full, HL.low);
+            cycles += 8;
+        break;
+    
+        case 0x76: //LD B (HL)
+            halt = true;
+        break;
+    
+        case 0x77: //LD (HL) A
+            write(HL.full, AF.high);
+            cycles += 8;
         break;
     
          case 0x78: // LD A B
@@ -899,54 +1117,360 @@ void Gameboy::decode1(uint8_t opcode){
             cycles += 4;
         break;
     
+        case 0xC0: //RET NZ
+            if(!check_flag(7)){
+                cycles += 20;
+                op_return();
+            }else{
+                cycles += 8;
+                PC.full++;
+            }
+        break;
+    
+        case 0xC1: //POP BC
+            op_pop(BC);
+            cycles += 12;
+        break;
+    
+        case 0xC2: //JP NZ u16
+            if(!check_flag(7)){
+                cycles += 16;
+                op_jump();
+            }else{
+                cycles += 12;
+                PC.full++;
+            }
+        break;
+    
+        case 0xC3: //JP u16
+            cycles += 16;
+            op_jump();
+        break;
+    
+        case 0xC4: //CALL NZ u16
+            if(!check_flag(7)){
+                cycles += 24;
+                op_call();
+            }else{
+                cycles += 12;
+                PC.full += 2;
+            }
+        break;
+    
+        case 0xC5: //PUSH BC
+            op_push(BC);
+            cycles += 16;
+        break;
+    
         case 0xC6: //ADD A u8
-            op_8bit_add(read(pc));
+            op_8bit_add(read(PC.full));
             cycles += 8;
-            pc++;
+            PC.full++;
+        break;
+    
+        case 0xC7: //RST 00h
+            cycles += 16;
+            op_restart(0x00);
+        break;
+    
+        case 0xC8: //RET Z
+            if(check_flag(7)){
+                cycles += 20;
+                op_return();
+            }else{
+                cycles += 8;
+            }
+        break;
+    
+        case 0xC9: //RET
+            cycles += 16;
+            op_return();
+        break;
+        
+        case 0xCA: //JP Z u16
+            if(check_flag(7)){
+                cycles += 16;
+                op_jump();
+            }else{
+                cycles += 12;
+                PC.full += 2;
+            }
+        break;
+        
+        case 0xCC: //CALL Z u16
+            if(check_flag(7)){
+                cycles += 24;
+                op_call();
+            }else{
+                cycles += 12;
+                PC.full += 2;
+            }
+        break;
+    
+        case 0xCD: //CALL u16
+            cycles += 24;
+            op_call();
         break;
     
         case 0xCE: //ADC A u8
             carrying = true;
-            op_8bit_add(read(pc));
+            op_8bit_add(read(PC.full));
             cycles += 8;
-            pc++;
+            PC.full++;
+        break;
+    
+        case 0xCF: //RST 08h
+            cycles += 16;
+            op_restart(0x08);
+        break;
+    
+        case 0xD0: //RET NC
+            if(!check_flag(4)){
+                cycles += 20;
+                op_return();
+            }else{
+                cycles += 8;
+            }
+        break;
+    
+        case 0xD1: //POP DE
+            op_pop(DE);
+            cycles += 12;
+        break;
+    
+        case 0xD4: //CALL NC u16
+            if(!check_flag(4)){
+                cycles += 24;
+                op_call();
+            }else{
+                cycles += 12;
+                PC.full += 2;
+            }
+        break;
+    
+        case 0xD5: //PUSH DE
+            op_push(DE);
+            cycles += 16;
         break;
     
         case 0xD6: //SUB A u8
-            op_8bit_subtract(read(pc));
+            op_8bit_subtract(read(PC.full));
             cycles += 8;
-            pc++;
+            PC.full++;
+        break;
+    
+        case 0xD7: //RST 10h
+            cycles += 16;
+            op_restart(0x10);
+        break;
+    
+        case 0xD8: //RET C
+            if(check_flag(4)){
+                cycles += 20;
+                op_return();
+            }else{
+                cycles += 8;
+            }
+        break;
+    
+        case 0xD9: //RETI
+            /* if interupt return
+                cycles += 20;
+                op_return();
+            */
+            cycles += 8;
+        break;
+    
+        case 0xDA: //JP C u16
+            if(check_flag(4)){
+                cycles += 16;
+                op_jump();
+            }else{
+                cycles += 12;
+                PC.full += 2;
+            }
+        break;
+    
+        case 0xDC: //CALL C u16
+            if(check_flag(4)){
+                cycles += 24;
+                op_call();
+            }else{
+                cycles += 12;
+                PC.full += 2;
+            }
         break;
     
         case 0xDE: //SBC A u8
             carrying = true;
-            op_8bit_subtract(read(pc));
+            op_8bit_subtract(read(PC.full));
             cycles += 8;
-            pc++;
+            PC.full++;
+        break;
+    
+        case 0xDF: //RST 18h
+            cycles += 16;
+            op_restart(0x18);
+        break;
+    
+        case 0xE0: //LD(FF00+u8) A
+            write((0xFF00 + read(PC.full)), AF.high);
+            cycles += 12;
+            PC.full++;
+        break;
+    
+        case 0xE1: //POP HL
+            op_pop(HL);
+            cycles += 12;
+        break;
+    
+        case 0xE2: //LD(FF00+C) A
+            write((0xFF00 + BC.low), AF.high);
+            cycles += 8;
+        break;
+    
+        case 0xE5: //PUSH HL
+            op_push(HL);
+            cycles += 16;
         break;
     
         case 0xE6: //AND A u8
-            op_8bit_and(read(pc));
+            op_8bit_and(read(PC.full));
             cycles += 8;
-            pc++;
+            PC.full++;
         break;
     
+        case 0xE7: //RST 20h
+            cycles += 16;
+            op_restart(0x20);
+        break;
+    
+        case 0xE8:{ //ADD SP i8
+            unset_flag(7);
+            unset_flag(6);
+            
+            int8_t val = read(PC.full);
+            
+            if(((SP.full & 0xf) + (val & 0xf)) & 0x10 == 0x10){
+                    set_flag(5);
+            }
+            
+            if((SP.full + val) > 0xFF){
+                  set_flag(4);
+            }
+            
+            SP.full += val;
+            cycles += 16;
+            PC.full++;
+        }
+        break;
+    
+        case 0xE9: //JP HL
+            cycles += 4;
+            PC.full += HL.full;
+        break;
+    
+        case 0xEA: //LD (u16) A
+            write(read(PC.full), AF.high);
+            write(read(PC.full++), AF.high);
+            cycles += 16;
+            PC.full += 2;
+    
         case 0xEE: //XOR A u8
-            op_8bit_xor(read(pc));
+            op_8bit_xor(read(PC.full));
             cycles += 8;
-            pc++;
+            PC.full++;
+        break;
+    
+        case 0xEF: //RST 28h
+            cycles += 16;
+            op_restart(0x28);
+        break;
+    
+        case 0xF0: //LD A (FF00+u8)
+            op_8bit_load(AF.high, (0xFF00 + read(PC.full)));
+            cycles += 12;
+            PC.full++;
+        break;
+    
+        case 0xF1: //POP AF
+            op_pop(AF);
+            cycles += 12;
+        break;
+    
+        case 0xF2: //LD A (FF00+C)
+            op_8bit_load(AF.high, (0xFF00 + BC.low));
+            cycles += 8;
+        break;
+    
+        case 0xF3: //DI
+            IME = false;
+            cycles += 4;
+        break;
+    
+        case 0xF5: //PUSH AF
+            op_push(AF);
+            cycles += 16;
         break;
     
         case 0xF6: //OR A u8
-            op_8bit_or(read(pc));
+            op_8bit_or(read(PC.full));
             cycles += 8;
-            pc++;
+            PC.full++;
+        break;
+    
+        case 0xF7: //RST 30h
+            cycles += 16;
+            op_restart(0x30);
+        break;
+    
+        case 0xF8:{ //LD HL SP+i8
+            unset_flag(7);
+            unset_flag(6);
+            
+            int8_t val = read(PC.full);
+            
+            if(((SP.full & 0xf) + (val & 0xf)) & 0x10 == 0x10){
+                    set_flag(5);
+            }
+            
+            if((SP.full + val) > 0xFF){
+                  set_flag(4);
+            }
+            
+            SP.full += val;
+            HL.full = SP.full;
+            cycles += 16;
+            PC.full++;
+        }
+        break;
+    
+        case 0xF9: //LD SP HL
+            cycles += 8;
+            SP.full == HL.full;
+        break;
+    
+        case 0xFA: //LD A (u16)
+            AF.high = read(PC.full++);
+            AF.high = read(PC.full += 2);
+            cycles += 16;
+            PC.full += 2;
+        break;
+    
+        case 0xFB: //EI
+            IME = true;
+            cycles += 4;
         break;
     
         case 0xFE: //CP A u8
-            op_8bit_compare(read(pc));
+            op_8bit_compare(read(PC.full));
             cycles += 8;
-            pc++;
+            PC.full++;
+        break;
+    
+        case 0xFF: //RST 38h
+            cycles += 16;
+            op_restart(0x38);
         break;
     }
 }

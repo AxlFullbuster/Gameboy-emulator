@@ -7,7 +7,6 @@
 class Gameboy{
     private:
         uint8_t opcode;
-        uint16_t pc;
         int cycles;
         
         uint8_t memory[65536];
@@ -27,6 +26,7 @@ class Gameboy{
         Register DE;
         Register HL;
         Register SP;
+        Register PC;
         
         void initialize();
         void emulateCycle();
@@ -36,15 +36,21 @@ class Gameboy{
         void write(uint16_t address, uint8_t data);
         
         bool carrying;
-        bool setZ;    bool unsetZ;
-        bool setN;    bool unsetN;
-        bool setH;    bool unsetH;
-        bool setC;    bool unsetC;
+        bool condition;
+        bool left;
+        bool right;
+        bool halt;
+        bool IME;
+        
         
         
        
         //opcode functions
-        void flags();
+        void set_flag(int f);
+        void unset_flag(int f);
+        bool check_flag(int f);
+        void flip_flag(int f);
+        void op_cpl();
         void op_8bit_load(uint8_t r1, uint8_t r2);
         void op_16bit_load(Register dd, uint16_t nn);
         void op_8bit_add(uint8_t v);
@@ -54,6 +60,15 @@ class Gameboy{
         void op_8bit_xor(uint8_t s);
         void op_8bit_compare(uint8_t s);
         void op_16bit_add_to_hl(uint16_t ss);
+        void op_rotate(uint8_t val);
+        void op_jump();
+        void op_jump_signed(int8_t e);
+        void op_call();
+        void op_return();
+        void op_restart(uint8_t p);
+        void op_push(Register qq);
+        void op_pop(Register qq);
+        void op_DAA();
     
     public:
         Gameboy();
