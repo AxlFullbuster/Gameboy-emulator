@@ -313,14 +313,55 @@ void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
  void Gameboy::op_rotate(uint8_t val){
      bitset<8> bit(val);
      if(left){
-         bit <<= 1;
+         bit << 1;
          val = bit.to_ulong();
      }
      
      if(right){
-        bit >>=1;
+        bit >> 1;
         val = bit.to_ulong();
      }
+ }
+ 
+ void Gameboy::op_shift(uint8_t val){
+    bitset<8> bit(val);
+    
+    if(left) bit <<= 1;
+     
+    if(right) bit >>= 1;
+     
+    if(reset7) bit.reset(7);
+   
+    if(reset0) bit.reset(0);
+     
+    val = bit.to_ulong();
+ }
+ 
+ void Gameboy::op_swap(uint8_t val){
+    bitset<8> bit(val);
+    bit = (bit >> 4) | (bit << 4);
+    val = bit.to_ulong();
+ }
+ 
+ void Gameboy::op_bit(int b, uint8_t val){
+    bitset<8> bit(val);
+    if(bit.test(b)){
+        unset_flag(7);
+    }else{
+       set_flag(7);
+    }
+ }
+ 
+ void Gameboy::op_set(int b, uint8_t val){
+    bitset<8> bit(val);
+    bit.set(b);
+    val = bit.to_ulong();
+ }
+ 
+ void Gameboy::op_reset(int b, uint8_t val){
+   bitset<8> bit(val);
+   bit.reset(b);
+   val = bit.to_ulong();
  }
  
  void Gameboy::op_call(){

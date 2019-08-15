@@ -2,15 +2,15 @@
 ======
 This project focuses on creating a Gameboy emulator.
 
-The emulator uses SDL for it's display and input.
+The emulator uses SDL for it's display and input, and is written in C++.  
 
-The goal of this project is to create an emulator that can run games accurately, and to learn about CPU design.
+The goal of this project is to create an emulator that can run games somewhat accurately, and to learn about CPU design.  
 
-There are currently no plans to emulate sound and memory banking past the first type.
+There are currently no plans to emulate sound and memory banking past the first type.    
 
 #Current Progress
 ======
-Currently working on implementing opcodes.
+Finished opcode implementation. Will need to test them using Blargg's test roms.  
 
 #References
 ======

@@ -41,6 +41,8 @@ class Gameboy{
         bool right;
         bool halt;
         bool IME;
+        bool reset7;
+        bool reset0;
         
         
         
@@ -61,6 +63,11 @@ class Gameboy{
         void op_8bit_compare(uint8_t s);
         void op_16bit_add_to_hl(uint16_t ss);
         void op_rotate(uint8_t val);
+        void op_shift(uint8_t val);
+        void op_swap(uint8_t val);
+        void op_bit(int b, uint8_t val);
+        void op_set(int b, uint8_t val);
+        void op_reset(int b, uint8_t val);
         void op_jump();
         void op_jump_signed(int8_t e);
         void op_call();
