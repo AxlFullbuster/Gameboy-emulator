@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
+//Note PC incrementation is off by 1, will fix this soon
 void Gameboy::decode2(uint8_t opcode){
     switch(opcode){
         case 0x00: //RLC B

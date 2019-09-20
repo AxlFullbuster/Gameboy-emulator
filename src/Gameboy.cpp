@@ -24,6 +24,7 @@ Gameboy::~Gameboy(){
     //do nothing
 }
 
+//initialize the emulator values to the ones given in the boot rom
 void Gameboy::initialize(){
     //clear memory
     for(int i = 0x0000; i < 0x10000; ++i){
@@ -62,6 +63,7 @@ void Gameboy::initialize(){
 }
 
 
+//runs the emulation loop for one frame then refresh the screen
 void Gameboy::emuLoop(){
     while (cycles <= 70244){
         emulateCycle();
@@ -83,6 +85,7 @@ void Gameboy::emulateCycle(){
     }
 }
 
+//read from memory space
 uint8_t Gameboy::read(uint16_t address){
     if(address >= 0x0000 && address <= 0x7000){
         //reading from 32kb rom
@@ -123,37 +126,34 @@ uint8_t Gameboy::read(uint16_t address){
     if (address == 0xFFFF){
         //enable interupt flag
     }
- 
- 
- 
     return memory[address];
 }
 
 
+//write to memory space
 void Gameboy::write(uint16_t address, uint8_t data){
- 
     if(address >= 0x0000 && address <= 0x7000){
-        //reading from 32kb rom
+       //can't write to rom
     }
     
     if(address >= 0x8000 && address <= 0x9FFF){
-        //reading from GPU address space
+        //writing to GPU address space
     }
     
     if(address >= 0xA000 && address <= 0xB000){
-        //reading from external ram
+        //writing to external ram
     }
     
     if(address >= 0xC000 && address <= 0xDFFF){
-        //reading from internal ram
+        //writing to internal ram
     }
     
     if(address >= 0xE000 &&  address <= 0xFDFF){
-        //reading from echo ram
+        //writing to echo ram
     }
     
     if(address >= 0xFE00 && address <=0xFE9F){
-        //reading from sprite attribute table
+        //writing to sprite attribute table
     }
     
     if(address >= 0xFEA0 && address <= 0x0FEFF){
@@ -175,26 +175,27 @@ void Gameboy::write(uint16_t address, uint8_t data){
     memory[address] = data;
 }
 
+//load the game into memory
 bool Gameboy::loadGame(const char* filename){
-    PC.full = 0x000;
+    initialize();
     streampos size;
     char* memblock;
     ifstream file (filename, ios::in|ios::binary|ios::ate);
     if(file.is_open()){
+     
        size = file.tellg();
        memblock = new char [size];
        file.seekg(0, ios::beg);
        file.read(memblock, size);
-       memcpy(&memory[0x0], memblock, 0x8000);
+       
+       memcpy(&memory[0x0000], memblock, 0x8000);
        file.close();
        delete[] memblock;
        return true;
     } else {
         cout << "Error couldn't read file" << endl;
         return false;
-    }
-    
-   
+    } 
 }
 
 void Gameboy::set_flag(int f){

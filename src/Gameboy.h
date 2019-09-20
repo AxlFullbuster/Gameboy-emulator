@@ -10,7 +10,6 @@ class Gameboy{
         int cycles;
         
         uint8_t memory[0x10000];
-        uint8_t ram[32768];
         
         union Register{
             struct{
@@ -38,8 +37,6 @@ class Gameboy{
         bool right;
         bool halt;
         bool IME;
-        bool reset7;
-        bool reset0;
         
         
         //opcode functions
