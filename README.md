@@ -1,4 +1,4 @@
-#Information  
+# Information  
 This project focuses on creating a Gameboy emulator.
 
 The emulator uses SDL for it's display and input, and is written in C++.  
@@ -7,15 +7,15 @@ The goal of this project is to create an emulator that can run games somewhat ac
 
 There are currently no plans to emulate sound and memory banking past the first type.    
 
-#Current Progress  
+# Current Progress  
 Finished opcode implementation. Will need to test them using Blargg's test roms.  
 
-#References  
+# References  
 [Gameboy Development Manual Version 1.1](https://archive.org/details/GameBoyProgManVer1.1)  
 [GameLad Development Wiki](https://github.com/Dooskington/GameLad/wiki)  
 [Gameboy Operation Code Table](https://izik1.github.io/gbops/)
 
-#Compiling Instructions  
+# Compiling Instructions  
 The program uses cmake to compile so here is what you'll need to do.  
 In the directory "CMakeLists.txt" is located enter these commands:  
 ```
