@@ -13,7 +13,8 @@ Finished opcode implementation. Will need to test them using Blargg's test roms.
 # References  
 [Gameboy Development Manual Version 1.1](https://archive.org/details/GameBoyProgManVer1.1)  
 [GameLad Development Wiki](https://github.com/Dooskington/GameLad/wiki)  
-[Gameboy Operation Code Table](https://izik1.github.io/gbops/)
+[Gameboy Operation Code Table](https://izik1.github.io/gbops/)  
+[tcbrindle's CMake Scripts](https://github.com/tcbrindle/sdl2-cmake-scripts)
 
 # Compiling Instructions  
 The program uses cmake to compile so here is what you'll need to do.  
