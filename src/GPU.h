@@ -2,12 +2,11 @@
 #define GPU_H
 
 
-#include "Gameboy.h"
 #include<SDL2/SDL.h>
-#include<SDL2/SDL_ttf.h>
 
 
-class GPU : Gameboy{
+
+class GPU{
     public:
         SDL_Window* window = NULL;
         SDL_Renderer* renderer = NULL;
@@ -18,20 +17,13 @@ class GPU : Gameboy{
         int sy = SCREEN_HEIGHT / 144;
         
          bool init();
+         void input();
          void close();
          void draw_display();
          
          GPU();
          ~GPU();
          
-    private:
-        bool lcd_set();
-        
-        
 };
-
-
-
-
 
 #endif

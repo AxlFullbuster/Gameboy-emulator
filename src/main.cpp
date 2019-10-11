@@ -1,8 +1,10 @@
 #include "Gameboy.h"
 #include "GPU.h"
 #include <iostream>
+#include <string>
 
 using std::cout;
+using std::cin;
 using std::endl;
 
 GPU display;
@@ -35,9 +37,14 @@ int main(int argc, char* argv[]){
                 //input method
             }
             emu.emuLoop();
-            display.draw_display();
+            emu.debug();
+            emu.lcd_control();
+            if(emu.lcd_set){
+                display.draw_display();
+            }
         }
     }
     display.close();
+    cout << endl;
     return 0;
 }

@@ -13,8 +13,6 @@ add_executable(${PROJECT1} ${SOURCES})
 
 include(FindPkgConfig)
 PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
-PKG_SEARCH_MODULE(SDL2_ttf REQUIRED SDL2_ttf)
 
-include_directories(${SDL2_TTF_INCLUDE_DIR})
 
-target_link_libraries(${PROJECT1} ${SDL2_LIBRARIES} ${SDL2_TTF_LIBRARIES})
+target_link_libraries(${PROJECT1} SDL2main SDL2)

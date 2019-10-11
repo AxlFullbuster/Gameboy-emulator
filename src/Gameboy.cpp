@@ -3,7 +3,6 @@
 #include<vector>
 #include <fstream>
 #include <iostream>
-#include <memory.h>
 
 using std::bitset;
 using std::vector;
@@ -12,7 +11,6 @@ using std::ifstream;
 using std::ios;
 using std::cout;
 using std::endl;
-using std::streampos;
 
 
 
@@ -63,11 +61,12 @@ void Gameboy::initialize(){
 }
 
 
+
 //runs the emulation loop for one frame then refresh the screen
 void Gameboy::emuLoop(){
     while (cycles <= 70244){
         emulateCycle();
-        //update graphics
+        lcd_control();
         //handle interputs
         //other junk
     }
@@ -87,115 +86,93 @@ void Gameboy::emulateCycle(){
 
 //read from memory space
 uint8_t Gameboy::read(uint16_t address){
-    if(address >= 0x0000 && address <= 0x7000){
-        //reading from 32kb rom
-    }
-    
-    if(address >= 0x8000 && address <= 0x9FFF){
-        //reading from GPU address space
-    }
-    
-    if(address >= 0xA000 && address <= 0xB000){
-        //reading from external ram
-    }
-    
-    if(address >= 0xC000 && address <= 0xDFFF){
-        //reading from internal ram
-    }
-    
-    if(address >= 0xE000 &&  address <= 0xFDFF){
-        //reading from echo ram
-    }
-    
-    if(address >= 0xFE00 && address <=0xFE9F){
-        //reading from sprite attribute table
-    }
-    
-    if(address >= 0xFEA0 && address <= 0x0FEFF){
-        //don't do anything here the gameboy will get mad
-    }
-    
-    if (address >= 0xFF00 && address <= 0xFF7F){
-        //various hardware I/O registers
-    }
-    
-    if (address >= 0xFF80 && address <= 0xFFFE){
-        //high ram and where the stack lives
-    }
-    
-    if (address == 0xFFFF){
-        //enable interupt flag
-    }
     return memory[address];
 }
-
 
 //write to memory space
 void Gameboy::write(uint16_t address, uint8_t data){
     if(address >= 0x0000 && address <= 0x7000){
        //can't write to rom
     }
-    
-    if(address >= 0x8000 && address <= 0x9FFF){
-        //writing to GPU address space
-    }
-    
-    if(address >= 0xA000 && address <= 0xB000){
-        //writing to external ram
-    }
-    
-    if(address >= 0xC000 && address <= 0xDFFF){
-        //writing to internal ram
-    }
-    
-    if(address >= 0xE000 &&  address <= 0xFDFF){
-        //writing to echo ram
-    }
-    
-    if(address >= 0xFE00 && address <=0xFE9F){
-        //writing to sprite attribute table
-    }
-    
-    if(address >= 0xFEA0 && address <= 0x0FEFF){
-        //don't do anything here the gameboy will get mad
-    }
-    
-    if (address >= 0xFF00 && address <= 0xFF7F){
-        //various hardware I/O registers
-    }
-    
-    if (address >= 0xFF80 && address <= 0xFFFE){
-        //high ram and where the stack lives
-    }
-    
-    if (address == 0xFFFF){
-        //enable interupt flag
-    }
-    
     memory[address] = data;
 }
 
+void Gameboy::lcd_control(){
+   bitset<8> lcd_control = read(0xFF40);
+   if(lcd_control.test(7)) lcd_set = true;
+}
+
+
+//prints out values of registers in real time
+void Gameboy::debug(){
+   int a = (unsigned)AF.high;
+   int f = (unsigned)AF.low;
+   int b = (unsigned)BC.high;
+   int c = (unsigned)BC.low;
+   int d = (unsigned)DE.high;
+   int e = (unsigned)DE.low;
+   int h = (unsigned)HL.high;
+   int l = (unsigned)HL.low;
+ 
+   cout << "\r" 
+   << "PC: " << PC.full << "  "
+   << "SP: " << SP.full << " "
+   << "AF: " << AF.full << "  "
+   << "BC: " << BC.full << "  "
+   << "DE: " << DE.full << "  "
+   << "HL: " << HL.full << "  "
+   << "A: " << a << "  "
+   << "B: " << b << "  "
+   << "C: " << c << "  "
+   << "D: " << d << "  "
+   << "E: " << e << "  "
+   << "F: " << f << "  "
+   << "H: " << h << "  "
+   << "L: " << l << "  ";
+}
+
+
+/*
+ *print_char() will look for the next text character to draw to
+ *the screen. tile_data() will print out all tile data stored
+ *in memory.
+
+void Gameboy::print_char(){
+   if(memory[0xFF02] == 0x81){
+       unsigned char text = read(0xFF01);
+       cout << (unsigned)text << endl;
+   }
+}
+
+void Gameboy::tile_data(){
+   for(unsigned int i = 0x8000; i < 0x9FFF; i++){
+        unsigned char text = read(i);
+        cout << text << endl;
+   }
+}
+*/
+  
 //load the game into memory
 bool Gameboy::loadGame(const char* filename){
-    initialize();
-    streampos size;
-    char* memblock;
-    ifstream file (filename, ios::in|ios::binary|ios::ate);
-    if(file.is_open()){
-     
-       size = file.tellg();
-       memblock = new char [size];
-       file.seekg(0, ios::beg);
-       file.read(memblock, size);
-       
-       memcpy(&memory[0x0000], memblock, 0x8000);
-       file.close();
-       delete[] memblock;
-       return true;
+    //uncomment the line below to have the emulator draw to the screen
+    //initialize();  
+    ifstream rom(filename, ios::in | ios::binary | ios::ate);
+    streamsize size = rom.tellg();
+    rom.seekg(0, ios::beg);
+    vector<char> buffer(size);
+    
+    
+    if (rom.read(buffer.data(), size)){
+      for (int i = 0; i <= buffer.size(); ++i) {
+      	memory[i] = buffer[i];
+      }
     } else {
-        cout << "Error couldn't read file" << endl;
+        printf("Couldn't load file");
         return false;
-    } 
+      }
+      
+    rom.close();
+    return true;
 }
 
 void Gameboy::set_flag(int f){

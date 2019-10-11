@@ -4,10 +4,11 @@
 #include<stdint.h>
 
 
-class Gameboy{
+class Gameboy {
     private:
         uint8_t opcode;
         int cycles;
+        
         
         uint8_t memory[0x10000];
         
@@ -37,6 +38,8 @@ class Gameboy{
         bool right;
         bool halt;
         bool IME;
+        bool reset7;
+        bool reset0;
         
         
         //opcode functions
@@ -68,18 +71,21 @@ class Gameboy{
         void op_push(Register qq);
         void op_pop(Register qq);
         void op_DAA();
-    
+        
     public:
         Gameboy();
         ~Gameboy();
         
-        unsigned char gfx[160*144];
+        bool lcd_set;
+        void lcd_control();
         
+        void debug();
+        void print_char();
+        void tile_data();
         void emuLoop();
         bool loadGame(const char* filename);
         uint8_t read(uint16_t address);
-        void write(uint16_t address, uint8_t data);
-       
+        void write(uint16_t address, uint8_t data);    
 };
 
 #endif
