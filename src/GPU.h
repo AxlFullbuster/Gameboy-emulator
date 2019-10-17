@@ -3,10 +3,12 @@
 
 
 #include<SDL2/SDL.h>
+#include "imgui.h"
+#include "imgui_sdl.h"
+#include "Gameboy.h"
 
 
-
-class GPU{
+class GPU : Gameboy{
     public:
         SDL_Window* window = NULL;
         SDL_Renderer* renderer = NULL;
@@ -20,6 +22,7 @@ class GPU{
          void input();
          void close();
          void draw_display();
+         void draw_debugger();
          
          GPU();
          ~GPU();

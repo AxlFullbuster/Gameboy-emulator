@@ -85,7 +85,24 @@ class Gameboy {
         void emuLoop();
         bool loadGame(const char* filename);
         uint8_t read(uint16_t address);
-        void write(uint16_t address, uint8_t data);    
+        void write(uint16_t address, uint8_t data);
+        
+        //methods for debugger
+        uint16_t get_AF();
+        uint16_t get_BC();
+        uint16_t get_DE();
+        uint16_t get_HL();
+        uint16_t get_PC();
+        uint16_t get_SP();
+        uint8_t * get_mem();
+        uint8_t get_A();
+        uint8_t get_B();
+        uint8_t get_C();
+        uint8_t get_D();
+        uint8_t get_E();
+        uint8_t get_H();
+        uint8_t get_L();
+        uint8_t get_F();
 };
 
 #endif

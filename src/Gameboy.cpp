@@ -102,60 +102,11 @@ void Gameboy::lcd_control(){
    if(lcd_control.test(7)) lcd_set = true;
 }
 
-
-//prints out values of registers in real time
-void Gameboy::debug(){
-   int a = (unsigned)AF.high;
-   int f = (unsigned)AF.low;
-   int b = (unsigned)BC.high;
-   int c = (unsigned)BC.low;
-   int d = (unsigned)DE.high;
-   int e = (unsigned)DE.low;
-   int h = (unsigned)HL.high;
-   int l = (unsigned)HL.low;
- 
-   cout << "\r" 
-   << "PC: " << PC.full << "  "
-   << "SP: " << SP.full << " "
-   << "AF: " << AF.full << "  "
-   << "BC: " << BC.full << "  "
-   << "DE: " << DE.full << "  "
-   << "HL: " << HL.full << "  "
-   << "A: " << a << "  "
-   << "B: " << b << "  "
-   << "C: " << c << "  "
-   << "D: " << d << "  "
-   << "E: " << e << "  "
-   << "F: " << f << "  "
-   << "H: " << h << "  "
-   << "L: " << l << "  ";
-}
-
-
-/*
- *print_char() will look for the next text character to draw to
- *the screen. tile_data() will print out all tile data stored
- *in memory.
-
-void Gameboy::print_char(){
-   if(memory[0xFF02] == 0x81){
-       unsigned char text = read(0xFF01);
-       cout << (unsigned)text << endl;
-   }
-}
-
-void Gameboy::tile_data(){
-   for(unsigned int i = 0x8000; i < 0x9FFF; i++){
-        unsigned char text = read(i);
-        cout << text << endl;
-   }
-}
-*/
   
 //load the game into memory
 bool Gameboy::loadGame(const char* filename){
     //uncomment the line below to have the emulator draw to the screen
-    //initialize();  
+    initialize();  
     ifstream rom(filename, ios::in | ios::binary | ios::ate);
     streamsize size = rom.tellg();
     rom.seekg(0, ios::beg);
@@ -441,6 +392,67 @@ void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
       A.flip();
       AF.high = A.to_ulong();
  }
+ 
+ 
+uint16_t Gameboy::get_AF(){
+   return AF.full;
+}
+
+uint16_t Gameboy::get_BC(){
+   return BC.full;
+}
+
+uint16_t Gameboy::get_DE(){
+   return DE.full;
+}
+
+uint16_t Gameboy::get_HL(){
+   return HL.full;
+}
+
+uint16_t Gameboy::get_PC(){
+   return PC.full;
+}
+        
+uint16_t Gameboy::get_SP(){
+   return SP.full;
+}
+
+uint8_t * Gameboy::get_mem(){
+   return memory;
+}
+
+uint8_t Gameboy::get_A(){
+    return AF.high;
+}
+
+uint8_t Gameboy::get_B(){
+    return BC.high;
+}
+
+uint8_t Gameboy::get_C(){
+    return BC.low;
+}
+
+uint8_t Gameboy::get_D(){
+    return DE.high;
+}
+
+uint8_t Gameboy::get_E(){
+    return DE.low;
+}
+
+uint8_t Gameboy::get_H(){
+    return HL.high;
+}
+
+uint8_t Gameboy::get_L(){
+    return HL.low;
+}
+
+uint8_t Gameboy::get_F(){
+    return this -> AF.low;
+}
  
  
  
