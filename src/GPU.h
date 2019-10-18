@@ -18,11 +18,14 @@ class GPU : Gameboy{
         int sx = SCREEN_WIDTH / 160;
         int sy = SCREEN_HEIGHT / 144;
         
+        Gameboy emulator;
+        
          bool init();
          void input();
          void close();
-         void draw_display();
-         void draw_debugger();
+         void draw_display(Gameboy &emu);
+         void draw_debugger(Gameboy &emu);
+         void print();
          
          GPU();
          ~GPU();

@@ -16,7 +16,7 @@ GPU::~GPU(){
 }
 
 //draw onto the screen
-void GPU::draw_display(){
+void GPU::draw_display(Gameboy &emu){
     //set to light blue
     SDL_SetRenderDrawColor(renderer, 114, 144, 154, 255);
     SDL_RenderClear(renderer);
@@ -37,7 +37,7 @@ void GPU::draw_display(){
             SDL_RenderFillRect(renderer,&pixel);  
         }
     }
-    draw_debugger();
+    draw_debugger(emu);
     //present the drawn canvas
     SDL_RenderPresent(renderer);
     SDL_Delay(50);
@@ -48,26 +48,26 @@ void GPU::draw_display(){
  *and values stored in memory
  *using the ImGui Library.
  */
-void GPU::draw_debugger(){
+void GPU::draw_debugger(Gameboy &emu){
     ImGui::NewFrame();
     
     //get bits in flag register
-    bitset<8> flags = get_F();
-    uint16_t pc = get_PC();
-    uint16_t af = get_AF();
-    uint16_t bc = get_BC();
-    uint16_t de = get_DE();
-    uint16_t hl = get_HL();
-    uint16_t sp = get_SP();
+    bitset<8> flags = emu.get_F();
+    uint16_t pc = emu.get_PC();
+    uint16_t af = emu.get_AF();
+    uint16_t bc = emu.get_BC();
+    uint16_t de = emu.get_DE();
+    uint16_t hl = emu.get_HL();
+    uint16_t sp = emu.get_SP();
     
-    uint8_t a = get_A();
-    uint8_t b = get_B();
-    uint8_t c = get_C();
-    uint8_t d = get_D();
-    uint8_t e = get_E();
-    uint8_t h = get_H();
-    uint8_t l = get_L();
-    uint8_t *mem = get_mem();
+    uint8_t a = emu.get_A();
+    uint8_t b = emu.get_B();
+    uint8_t c = emu.get_C();
+    uint8_t d = emu.get_D();
+    uint8_t e = emu.get_E();
+    uint8_t h = emu.get_H();
+    uint8_t l = emu.get_L();
+    uint8_t *mem = emu.get_mem();
     
     //create a new window called "Registers
     ImGui::Begin("Registers");
@@ -128,6 +128,7 @@ void GPU::draw_debugger(){
     ImGuiSDL::Render(ImGui::GetDrawData());
 }
 
+
 void GPU::input(){
     //do nothing for now
 }
@@ -135,7 +136,6 @@ void GPU::input(){
 //initialize the SDL window
 bool GPU::init(){
     bool success = true;
-    
     
     if(SDL_Init(SDL_INIT_VIDEO) < 0 ) {
         printf ( "SDL could not be initialized! SDL Error: %s\n", SDL_GetError());

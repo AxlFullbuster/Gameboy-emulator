@@ -87,6 +87,7 @@ class Gameboy {
         uint8_t read(uint16_t address);
         void write(uint16_t address, uint8_t data);
         
+        
         //methods for debugger
         uint16_t get_AF();
         uint16_t get_BC();

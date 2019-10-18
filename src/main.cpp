@@ -70,9 +70,7 @@ int main(int argc, char* argv[]){
             
             emu.emuLoop();
             emu.lcd_control();
-            if(emu.lcd_set){
-                display.draw_display();
-            }
+            display.draw_display(emu);
         }
     }
     display.close();

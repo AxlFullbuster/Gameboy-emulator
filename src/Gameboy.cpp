@@ -106,7 +106,7 @@ void Gameboy::lcd_control(){
 //load the game into memory
 bool Gameboy::loadGame(const char* filename){
     //uncomment the line below to have the emulator draw to the screen
-    initialize();  
+    //initialize();  
     ifstream rom(filename, ios::in | ios::binary | ios::ate);
     streamsize size = rom.tellg();
     rom.seekg(0, ios::beg);
@@ -392,6 +392,7 @@ void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
       A.flip();
       AF.high = A.to_ulong();
  }
+ 
  
  
 uint16_t Gameboy::get_AF(){
