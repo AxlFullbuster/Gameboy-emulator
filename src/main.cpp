@@ -69,7 +69,6 @@ int main(int argc, char* argv[]){
             io.MouseWheel = static_cast<float>(wheel);
             
             emu.emuLoop();
-            emu.lcd_control();
             display.draw_display(emu);
         }
     }

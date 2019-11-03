@@ -10,6 +10,7 @@ using std::streamsize;
 using std::ifstream;
 using std::ios;
 using std::cout;
+using std::cin;
 using std::endl;
 
 
@@ -28,7 +29,7 @@ void Gameboy::initialize(){
     for(int i = 0x0000; i < 0x10000; ++i){
          memory[i] = 0x00;
     }
-    
+ 
     PC.full = 0x100;
     SP.full = 0xFFFE;
     AF.full = 0x01B0;
@@ -60,29 +61,57 @@ void Gameboy::initialize(){
     memory[0xFF49] = 0xFF;
 }
 
+void Gameboy::loadLogo(){
+    memory[0x0104] = 0xCE;
+    memory[0x0105] = 0xED;
+    memory[0x0106] = 0x66;
+    memory[0x0107] = 0x66;
+    memory[0x0108] = 0xCC;
+    memory[0x0109] = 0x0D;
+    memory[0x0111] = 0x0B;
+    memory[0x0112] = 0x03;
+    memory[0x0113] = 0x73;
+    memory[0x0115] = 0x83;
+    memory[0x0117] = 0x0C;
+    memory[0x0119] = 0x0D;
+    memory[0x0121] = 0x08;
+    memory[0x0122] = 0x11;
+    memory[0x0123] = 0x1F;
+    memory[0x0124] = 0x88;
+    memory[0x0125] = 0x89;
+    memory[0x0127] = 0x0E;
+    memory[0x0128] = 0xDC;
+    memory[0x0129] = 0xCC;
+    memory[0x0130] = 0x6E;
+    memory[0x0131] = 0xE6;
+    memory[0x0132] = 0xDD;
+    memory[0x0133] = 0xDD;
+    memory[0x0134] = 0xD9;   
+}
+
 
 
 //runs the emulation loop for one frame then refresh the screen
 void Gameboy::emuLoop(){
     while (cycles <= 70244){
-        emulateCycle();
-        lcd_control();
+         emulateCycle();
         //handle interputs
         //other junk
     }
     //refresh screen;
-    cycles -= 70244;
+    cycles -=70244;
 }
 
 void Gameboy::emulateCycle(){
-    opcode = read(PC.full++);
+    opcode = read(PC.full);
     if(opcode != 0xCB){
-        decode1(opcode);
-    } else {
-        opcode = read(PC.full++);
+       decode1(opcode);
+    }else {
+        opcode = read(PC.full + 1);
         decode2(opcode);
     }
 }
+
 
 //read from memory space
 uint8_t Gameboy::read(uint16_t address){
@@ -91,22 +120,24 @@ uint8_t Gameboy::read(uint16_t address){
 
 //write to memory space
 void Gameboy::write(uint16_t address, uint8_t data){
-    if(address >= 0x0000 && address <= 0x7000){
+    if(address >= 0x0000 && address <= 0x7FFF){
        //can't write to rom
+    }else if(address >= 0xE000 && address <= 0xFDFF){
+       memory[address] = data;
+       write(address - 0x2000, data);
+    }else if(address >= 0xFEA0 && address <= 0xFEFF){
+       //don't write here the gameboy will get mad
+    }else{
+       memory[address] = data;
     }
-    memory[address] = data;
 }
 
-void Gameboy::lcd_control(){
-   bitset<8> lcd_control = read(0xFF40);
-   if(lcd_control.test(7)) lcd_set = true;
-}
 
   
 //load the game into memory
 bool Gameboy::loadGame(const char* filename){
     //uncomment the line below to have the emulator draw to the screen
-    //initialize();  
+    //initialize();
     ifstream rom(filename, ios::in | ios::binary | ios::ate);
     streamsize size = rom.tellg();
     rom.seekg(0, ios::beg);
@@ -151,42 +182,70 @@ void Gameboy::flip_flag(int f){
     }else{
        flag.set(f);
     }
+    AF.low = flag.to_ulong();
 }
 
-void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
-    r1 = r2;   
+void Gameboy::set_pre_flags(uint8_t &val){
+   unset_flag(6);
+   unset_flag(5);
+   
+   if(val == 0) set_flag(7);
+   else unset_flag(7);
+   
+   if(val > 0xFF)set_flag(4);
+   else unset_flag(4);
 }
 
- void Gameboy::op_16bit_load(Register dd, uint16_t nn){
-    dd.low = nn;
-    dd.high = nn++;
- }
+void Gameboy::set_unpre_flags(){
+   unset_flag(7);
+   unset_flag(6);
+   unset_flag(5);
+   
+   if(AF.high > 0xFF)set_flag(4);
+   else unset_flag(4);
+}
+
+void Gameboy::op_8bit_load(uint8_t &r1, uint8_t r2){
+    r1 = r2;
+}
+
+void Gameboy::op_16bit_load(Register &r){
+    r.low = read(PC.full + 1);
+    r.high = read(PC.full + 2);
+}
  
  void Gameboy::op_8bit_add(uint8_t v){
      AF.high += v;
      unset_flag(6);
-     
+  
+  
      if(carrying){
         AF.high++;
      }
      
-     if(((AF.high & 0xf) + (v & 0xf)) & 0x10 == 0x10){
+     if((((AF.high & 0xf) + (v & 0xf)) & 0x10) == 0x10){
             set_flag(5);
+     }else{
+       unset_flag(5);
      }
      
      if((AF.high + v) > 0xFF){
            set_flag(4);
+     } else{
+       unset_flag(4);
      }
      
      if((AF.high + v) == 0){
            set_flag(7);
+     } else {
+       unset_flag(7);
      }
  }
  
  
  void Gameboy::op_8bit_subtract(uint8_t s){
-    set_flag(6);
     AF.high -= s;
+    set_flag(6);
     
     if(carrying){
       AF.high++;
@@ -194,14 +253,20 @@ void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
     
     if( (AF.high - s) == 0){
        set_flag(7);
+    }else{
+      unset_flag(7);
     }
     
-    if(((AF.high & 0xf) + (s & 0xf)) & 0x10 == 0x10){
+    if((((AF.high & 0xf) + (s & 0xf)) & 0x10) == 0x10){
        set_flag(5);
+    }else{
+      unset_flag(5);
     }
-     
+    
     if((AF.high + s) > 0xFF){
         set_flag(4);
+    }else{
+     unset_flag(4);
     }
  }
  
@@ -212,8 +277,10 @@ void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
     unset_flag(4); 
     set_flag(5);
     
-    if( (AF.high - s) == 0){
+    if( (AF.high & s) == 0){
        set_flag(7);
+    }else {
+      unset_flag(7);
     }
  }
  
@@ -224,8 +291,10 @@ void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
     unset_flag(5);
     
     
-    if( (AF.high - s) == 0){
+    if( (AF.high | s) == 0){
        set_flag(7);
+    }else {
+      unset_flag(7);
     }
  }
  
@@ -235,78 +304,131 @@ void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
     unset_flag(4);
     unset_flag(5);
     
-    if( (AF.high - s) == 0){
+    if( (AF.high ^ s) == 0){
        set_flag(7);
+    }else {
+      unset_flag(7);
     }
  }
  
  void Gameboy::op_8bit_compare(uint8_t s){
     set_flag(6);
     
-    if( (AF.high - s) == 0){
+    if(AF.high == s){
        set_flag(7);
+    }else {
+      unset_flag(7);
     }
     
-    if(((AF.high & 0xf) + (s & 0xf)) & 0x10 == 0x10){
+    if((((AF.high & 0xf) + (s & 0xf)) & 0x10) == 0x10){
        set_flag(5);
+    }else {
+      unset_flag(5);   
     }
-        
+    
     if((AF.high + s) > 0xFF){
        set_flag(4);
+    }else {
+      unset_flag(4);
     }
 }
  
  void Gameboy::op_16bit_add_to_hl(uint16_t ss){
     unset_flag(6);
     HL.full += ss;
- }
+    
+    if((((HL.full & 0xf) + (ss & 0xf)) & 0x10) == 0x10){
+       set_flag(5);
+    }else {
+      unset_flag(5); 
+    }
+    if((HL.full + ss) > 0xFF){
+       set_flag(4);
+    }else{
+       unset_flag(4);
+    }
+}
  
  void Gameboy::op_jump(){
       Register nn;
-      nn.low = read(PC.full);
-      nn.high = read(PC.full++);
-      PC.full += nn.full;
+      nn.low = read(PC.full + 1);
+      nn.high = read(PC.full + 2);
+      PC.full +=3;
+      PC.full = nn.full;
  }
  
  void Gameboy::op_jump_signed(int8_t e){
+      PC.full += 2;
       PC.full += e;
  }
  
- void Gameboy::op_rotate(uint8_t val){
+ void Gameboy::op_rotate(uint8_t &val){
      bitset<8> bit(val);
+     bitset<8> flag(AF.low);
      if(left){
-         bit << 1;
-         val = bit.to_ulong();
+         bit = bit << 1 | bit >> (8-1);
      }
      
      if(right){
-        bit >> 1;
-        val = bit.to_ulong();
+        bit = bit >> 1 | bit << (8-1);
      }
+     
+     bit[0] = flag[4];
+     flag[4] = bit.test(7);
+     
+     if(val == AF.high){
+        set_unpre_flags();
+     }else{
+        set_pre_flags(val);
+     }
+     val = bit.to_ulong();
+     AF.low = flag.to_ulong();
  }
  
- void Gameboy::op_shift(uint8_t val){
+ void Gameboy::op_shift(uint8_t &val){
     bitset<8> bit(val);
+    bitset<8> flag(AF.low);
+    unset_flag(6);
+    unset_flag(5);
     
-    if(left) bit <<= 1;
-     
-    if(right) bit >>= 1;
+    if(left){
+      bit <<= 1;
+      flag[4] = bit.test(7);
+    }
+    
+    if(right){
+     bit >>= 1;
+     flag[4] = bit.test(0);
+    }
      
     if(reset7) bit.reset(7);
    
     if(reset0) bit.reset(0);
      
     val = bit.to_ulong();
+    AF.low = flag.to_ulong();
+    set_pre_flags(val);
  }
  
- void Gameboy::op_swap(uint8_t val){
+ void Gameboy::op_swap(uint8_t &val){
     bitset<8> bit(val);
+    unset_flag(6);
+    unset_flag(5);
+    unset_flag(4);
     bit = (bit >> 4) | (bit << 4);
     val = bit.to_ulong();
+    
+    if(val == 0){
+       set_flag(7);
+    }else{
+       unset_flag(7);
+    }
  }
  
- void Gameboy::op_bit(int b, uint8_t val){
+ void Gameboy::op_bit(int b, uint8_t &val){
     bitset<8> bit(val);
+    unset_flag(6);
+    set_flag(5);
     if(bit.test(b)){
         unset_flag(7);
     }else{
@@ -314,37 +436,33 @@ void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
     }
  }
  
- void Gameboy::op_set(int b, uint8_t val){
+ void Gameboy::op_set(int b, uint8_t &val){
     bitset<8> bit(val);
     bit.set(b);
     val = bit.to_ulong();
  }
  
- void Gameboy::op_reset(int b, uint8_t val){
+ void Gameboy::op_reset(int b, uint8_t &val){
    bitset<8> bit(val);
    bit.reset(b);
    val = bit.to_ulong();
  }
  
  void Gameboy::op_call(){
-     write(SP.full -1, PC.high);
-     write(SP.full -2, PC.low);
      Register nn;
-     op_16bit_load(nn, read(PC.full));
-     PC.full = nn.full;
-     SP.full -= 2;
+     op_16bit_load(nn);
+     PC.full +=3;
+     op_push(PC);
+     PC = nn;
  }
  
  void Gameboy::op_return(){
-     PC.low = read(SP.full);
-     PC.high = read(SP.full + 1);
-     SP.full += 2;
+     op_pop(PC); 
  }
  
  void Gameboy::op_restart(uint8_t p){
-     write(SP.full -1, PC.high);
-     write(SP.full -2, PC.low);
-     SP.full -= 2;
+     PC.full++;
+     op_push(PC);
      PC.high = 0;
      PC.low = p;
  }
@@ -355,9 +473,11 @@ void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
     SP.full -= 2;
  }
  
- void Gameboy::op_pop(Register qq){
-    write(SP.full, qq.low);
-    write(SP.full +1, qq.high);
+ void Gameboy::op_pop(Register &qq){
+    qq.low = read(SP.full);
+    qq.high = read(SP.full + 1);
+    write(SP.full, 0x0);
+    write(SP.full + 1, 0x0);
     SP.full += 2;
  }
  
@@ -380,20 +500,24 @@ void Gameboy::op_8bit_load(uint8_t r1, uint8_t r2){
     
      if(AF.high == 0){
          set_flag(7);
+     }else {
+       unset_flag(7);
      }
      
      if(AF.high > 0xFF){
          set_flag(4);
-     }  
+     }else {
+      unset_flag(7);
+     }
  }
  
  void Gameboy::op_cpl(){
+      set_flag(6);
+      set_flag(5);
       bitset<8> A(AF.high);
       A.flip();
       AF.high = A.to_ulong();
  }
- 
- 
  
 uint16_t Gameboy::get_AF(){
    return AF.full;
@@ -452,7 +576,11 @@ uint8_t Gameboy::get_L(){
 }
 
 uint8_t Gameboy::get_F(){
-    return this -> AF.low;
+    return AF.low;
+}
+
+uint8_t Gameboy::get_OP(){
+    return opcode;
 }
  
  

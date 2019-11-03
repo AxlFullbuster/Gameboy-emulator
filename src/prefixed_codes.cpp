@@ -6,7 +6,11 @@ void Gameboy::decode2(uint8_t opcode){
     switch(opcode){
         case 0x00: //RLC B
             left = true;
+            carrying = true;
             op_rotate(BC.high);
+            left = false;
+            carrying = false;
+            
             cycles += 8;
             PC.full += 2;
         break;
@@ -14,6 +18,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x01: //RLC C
             left = true;
             op_rotate(BC.low);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -21,6 +26,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x02: //RLC D
             left = true;
             op_rotate(DE.high);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -28,6 +34,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x03: //RLC E
             left = true;
             op_rotate(DE.low);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -35,6 +42,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x04: //RLC H
             left = true;
             op_rotate(HL.high);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -42,20 +50,26 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x05: //RLC L
             left = true;
             op_rotate(HL.low);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
     
-        case 0x06: //RLC (HL)
+        case 0x06:{ //RLC (HL)
             left = true;
-            op_rotate(read(HL.full));
+            uint8_t val = read(HL.full);
+            op_rotate(val);
+            left = false;
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0x07: //RLC A
             left = true;
             op_rotate(AF.high);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -63,6 +77,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x08: //RRC B
             right = true;
             op_rotate(BC.high);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -70,6 +85,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x09: //RRC C
             right = true;
             op_rotate(BC.low);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -77,6 +93,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x0A: //RRC D
             right = true;
             op_rotate(DE.high);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -84,13 +101,15 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x0B: //RRC E
             right = true;
             op_rotate(DE.low);
+            right = false;
             cycles += 8;
-           PC.full += 2;
+            PC.full += 2;
         break;
     
         case 0x0C: //RRC H
             right = true;
             op_rotate(HL.high);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -98,20 +117,26 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x0D: //RRC L
             right = true;
             op_rotate(HL.low);
+            right = false;
             cycles += 8;
-           PC.full += 2;
+            PC.full += 2;
         break;
     
-        case 0x0E: //RRC (HL)
+        case 0x0E:{ //RRC (HL)
             right = true;
-            op_rotate(read(HL.full));
+            uint8_t val = read(HL.full);
+            op_rotate(val);
+            right = false;
+            write(HL.full,val);
             cycles += 16;
-           PC.full += 2;
+            PC.full += 2;
+        }
         break;
     
         case 0x0F: //RRC A
             right = true;
             op_rotate(AF.high);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -119,6 +144,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x10: //RL B
             left = true;
             op_rotate(BC.high);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -126,6 +152,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x11: //RL C
             left = true;
             op_rotate(BC.low);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -133,6 +160,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x12: //RL D
             left = true;
             op_rotate(DE.high);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -140,6 +168,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x13: //RL E
             left = true;
             op_rotate(DE.low);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -147,6 +176,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x14: //RL H
             left = true;
             op_rotate(HL.high);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -154,20 +184,28 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x15: //RL L
             left = true;
             op_rotate(HL.low);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
     
-        case 0x16: //RL (HL)
+        case 0x16:{ //RL (HL)
             left = true;
-            op_rotate(read(HL.full));
+            uint8_t val = read(HL.full);
+            op_rotate(val);
+            left = false;
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0x17: //RL A
             left = true;
+            carrying = true;
             op_rotate(AF.high);
+            carrying = false;
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -175,6 +213,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x18: //RR B
             right = true;
             op_rotate(BC.high);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -189,6 +228,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x1A: //RR D
             right = true;
             op_rotate(DE.high);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -196,6 +236,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x1B: //RR E
             right = true;
             op_rotate(DE.low);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -203,6 +244,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x1C: //RR H
             right = true;
             op_rotate(HL.high);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -210,20 +252,26 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x1D: //RR L
             right = true;
             op_rotate(HL.low);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
     
-        case 0x1E: //RR (HL)
+        case 0x1E:{ //RR (HL)
             right = true;
-            op_rotate(read(HL.full));
+            uint8_t val = read(HL.full);
+            op_rotate(val);
+            right = false;
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0x1F: //RR A
             right = true;
             op_rotate(AF.high);
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -232,6 +280,8 @@ void Gameboy::decode2(uint8_t opcode){
             left = true;
             reset0 = true;
             op_shift(BC.high);
+            left = false;
+            reset0 = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -240,6 +290,8 @@ void Gameboy::decode2(uint8_t opcode){
             left = true;
             reset0 = true;
             op_shift(BC.low);
+            left = false;
+            reset0 = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -248,6 +300,8 @@ void Gameboy::decode2(uint8_t opcode){
             left = true;
             reset0 = true;
             op_shift(DE.high);
+            left = false;
+            reset0 = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -256,6 +310,8 @@ void Gameboy::decode2(uint8_t opcode){
             left = true;
             reset0 = true;
             op_shift(DE.low);
+            left = false;
+            reset0 = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -264,6 +320,8 @@ void Gameboy::decode2(uint8_t opcode){
             left = true;
             reset0 = true;
             op_shift(HL.high);
+            left = false;
+            reset0 = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -272,22 +330,31 @@ void Gameboy::decode2(uint8_t opcode){
             left = true;
             reset0 = true;
             op_shift(HL.low);
+            left = false;
+            reset0 = false;
             cycles += 8;
             PC.full += 2;
         break;
     
-        case 0x26: //SLA (HL)
+        case 0x26:{ //SLA (HL)
             left = true;
             reset0 = true;
-            op_shift(read(HL.full));
+            uint8_t val = read(HL.full);
+            op_shift(val);
+            left = false;
+            reset0 = false;
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0x27: //SLA A
             left = true;
             reset0 = true;
             op_shift(AF.high);
+            left = false;
+            reset0 = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -295,6 +362,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x28: //SRA B
             left = true;
             op_shift(BC.high);
+            left = false;
             cycles += 8;
            PC.full += 2;
         break;
@@ -302,6 +370,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x29: //SRA C
             left = true;
             op_shift(BC.low);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -309,6 +378,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x2A: //SRA D
             left = true;
             op_shift(DE.high);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -316,6 +386,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x2B: //SRA E
             left = true;
             op_shift(DE.low);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -323,6 +394,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x2C: //SRA H
             left = true;
             op_shift(HL.high);
+            left = false;
             cycles += 8;
            PC.full += 2;
         break;
@@ -330,20 +402,26 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x2D: //SRA L
             left = true;
             op_shift(HL.low);
+            left = false;
             cycles += 8;
-           PC.full += 2;
+          PC.full += 2;
         break;
     
-        case 0x2E: //SRA (HL)
+        case 0x2E:{ //SRA (HL)
             left = true;
-            op_shift(read(HL.full));
+            uint8_t val = read(HL.full);
+            op_shift(val);
+            left = false;
+            write(HL.full,val);
             cycles += 8;
             PC.full += 2;
+        }
         break;
     
         case 0x2F: //SRA A
             left = true;
             op_shift(AF.high);
+            left = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -351,7 +429,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x30: //SWAP B
             op_swap(BC.high);
             cycles += 8;
-            PC.full += 2;
+           PC.full += 2;
         break;
     
         case 0x31: //SWAP C
@@ -384,22 +462,27 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x36: //SWAP (HL)
-            op_swap(read(HL.full));
+        case 0x36:{ //SWAP (HL)
+            uint8_t val = read(HL.full);
+            op_swap(val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0x37: //SWAP A
             op_swap(AF.high);
             cycles += 8;
-            PC.full += 2;
+            PC.full++;
         break;
     
         case 0x38: //SRL B
             right = true;
             reset7 = true;
             op_shift(BC.high);
+            right = false;
+            reset7 = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -408,6 +491,8 @@ void Gameboy::decode2(uint8_t opcode){
             right = true;
             reset7 = true;
             op_shift(BC.low);
+            right = false;
+            reset7 = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -416,6 +501,8 @@ void Gameboy::decode2(uint8_t opcode){
             right = true;
             reset7 = true;
             op_shift(DE.high);
+            right = false;
+            reset7 = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -424,14 +511,18 @@ void Gameboy::decode2(uint8_t opcode){
             right = true;
             reset7 = true;
             op_shift(DE.low);
+            right = false;
+            reset7 = false;
             cycles += 8;
-            PC.full += 2;
+           PC.full += 2;
         break;
     
         case 0x3C: //SRL H
             right = true;
             reset7 = true;
             op_shift(HL.high);
+            right = false;
+            reset7 = false;
             cycles += 8;
             PC.full += 2;
         break;
@@ -440,30 +531,39 @@ void Gameboy::decode2(uint8_t opcode){
             right = true;
             reset7 = true;
             op_shift(HL.low);
+            right = false;
+            reset7 = false;
             cycles += 8;
             PC.full += 2;
         break;
     
-        case 0x3E: //SRL (HL)
+        case 0x3E:{ //SRL (HL)
             right = true;
             reset7 = true;
-            op_shift(read(HL.full));
+            uint8_t val = read(HL.full);
+            op_shift(val);
+            right = false;
+            reset7 = false;
+            write(HL.full,val);
             cycles += 8;
             PC.full += 2;
+        }
         break;
     
         case 0x3F: //SRL A
             right = true;
             reset7 = true;
             op_shift(AF.high);
+            right = false;
+            reset7 = false;
             cycles += 8;
-            PC.full += 2;
+           PC.full += 2;
         break;
     
         case 0x40: //BIT 0 B
             op_bit(0, BC.high);
             cycles += 8;
-            PC.full += 2;
+            PC.full++;
         break;
     
         case 0x41: //BIT 0 C
@@ -481,7 +581,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x43: //BIT 0 E
             op_bit(0, DE.low);
             cycles += 8;
-            PC.full += 2;
+           PC.full += 2;
         break;
     
         case 0x44: //BIT 0 H
@@ -496,10 +596,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x46: //BIT 0 (HL)
-            op_bit(0, read(HL.full));
+        case 0x46:{ //BIT 0 (HL)
+            uint8_t val = read(HL.full);
+            op_bit(0,val);
+            write(HL.full,val);
             cycles += 12;
             PC.full += 2;
+        }
         break;
     
         case 0x47: //BIT 0 A
@@ -544,10 +647,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x4E: //BIT 1 (HL)
-            op_bit(1, read(HL.full));
+        case 0x4E:{ //BIT 1 (HL)
+            uint8_t val = read(HL.full);
+            op_bit(1,val);
+            write(HL.full,val);
             cycles += 12;
             PC.full += 2;
+        }
         break;
     
         case 0x4F: //BIT 1 A
@@ -589,13 +695,16 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x55: //BIT 2 L
             op_bit(2, HL.low);
             cycles += 8;
-            PC.full += 2;
+           PC.full += 2;
         break;
     
-        case 0x56: //BIT 2 (HL)
-            op_bit(2, read(HL.full));
+        case 0x56:{ //BIT 2 (HL)
+            uint8_t val = read(HL.full);
+            op_bit(2,val);
+            write(HL.full,val);
             cycles += 12;
             PC.full += 2;
+        }
         break;
     
         case 0x57: //BIT 2 A
@@ -640,10 +749,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x5E: //BIT 3 (HL)
-            op_bit(3, read(HL.full));
+        case 0x5E:{ //BIT 3 (HL)
+            uint8_t val = read(HL.full);
+            op_bit(3,val);
+            write(HL.full,val);
             cycles += 12;
             PC.full += 2;
+        }
         break;
     
         case 0x5F: //BIT 3 A
@@ -688,10 +800,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x66: //BIT 4 (HL)
-            op_bit(4, read(HL.full));
+        case 0x66:{ //BIT 4 (HL)
+            uint8_t val = read(HL.full);
+            op_bit(4,val);
+            write(HL.full,val);
             cycles += 12;
             PC.full += 2;
+        }
         break;
     
         case 0x67: //BIT 4 A
@@ -736,10 +851,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x6E: //BIT 5 (HL)
-            op_bit(5, read(HL.full));
+        case 0x6E:{ //BIT 5 (HL)
+            uint8_t val = read(HL.full);
+            op_bit(5,val);
+            write(HL.full,val);
             cycles += 12;
             PC.full += 2;
+        }
         break;
     
         case 0x6F: //BIT 5 A
@@ -763,7 +881,7 @@ void Gameboy::decode2(uint8_t opcode){
         case 0x72: //BIT 6 D
             op_bit(6, DE.high);
             cycles += 8;
-            PC.full += 2;
+            PC.full++;
         break;
     
         case 0x73: //BIT 6 E
@@ -784,10 +902,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x76: //BIT 6 (HL)
-            op_bit(6, read(HL.full));
+        case 0x76:{ //BIT 6 (HL)
+            uint8_t val = read(HL.full);
+            op_bit(6,val);
+            write(HL.full,val);
             cycles += 12;
             PC.full += 2;
+        }
         break;
     
         case 0x77: //BIT 6 A
@@ -832,10 +953,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x7E: //BIT 7 (HL)
-            op_bit(7, read(HL.full));
+        case 0x7E:{ //BIT 7 (HL)
+            uint8_t val = read(HL.full);
+            op_bit(7,val);
+            write(HL.full,val);
             cycles += 12;
             PC.full += 2;
+        }
         break;
     
         case 0x7F: //BIT 7 A
@@ -880,10 +1004,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x86: //RES 0 (HL)
-            op_reset(0, read(HL.full));
+        case 0x86:{ //RES 0 (HL)
+            uint8_t val = read(HL.full);
+            op_reset(0,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0x87: //RES 0 A
@@ -928,10 +1055,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x8E: //RES 1 (HL)
-            op_reset(1, read(HL.full));
+        case 0x8E:{ //RES 1 (HL)
+            uint8_t val = read(HL.full);
+            op_reset(1,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0x8F: //RES 1 A
@@ -976,10 +1106,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x96: //RES 2 (HL)
-            op_reset(2, read(HL.full));
+        case 0x96:{ //RES 2 (HL)
+            uint8_t val = read(HL.full);
+            op_reset(2,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0x97: //RES 2 A
@@ -1024,10 +1157,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0x9E: //RES 3 (HL)
-            op_reset(3, read(HL.full));
+        case 0x9E:{ //RES 3 (HL)
+            uint8_t val = read(HL.full);
+            op_reset(3,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0x9F: //RES 3 A
@@ -1072,10 +1208,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xA6: //RES 4 (HL)
-            op_reset(4, read(HL.full));
+        case 0xA6:{ //RES 4 (HL)
+            uint8_t val = read(HL.full);
+            op_reset(4,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xA7: //RES 4 A
@@ -1120,10 +1259,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xAE: //RES 5 (HL)
-            op_reset(5, read(HL.full));
+        case 0xAE:{ //RES 5 (HL)
+            uint8_t val = read(HL.full);
+            op_reset(5,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xAF: //RES 5 A
@@ -1168,10 +1310,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xB6: //RES 6 (HL)
-            op_reset(6, read(HL.full));
+        case 0xB6:{ //RES 6 (HL)
+            uint8_t val = read(HL.full);
+            op_reset(6,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xB7: //RES 6 A
@@ -1216,10 +1361,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xBE: //RES 7 (HL)
-            op_reset(7, read(HL.full));
+        case 0xBE:{ //RES 7 (HL)
+            uint8_t val = read(HL.full);
+            op_reset(7,val);
+            write(HL.full,val);
             cycles += 16;
            PC.full += 2;
+        }
         break;
     
         case 0xBF: //RES 7 A
@@ -1264,10 +1412,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xC6: //SET 0 (HL)
-            op_set(0, read(HL.full));
+        case 0xC6:{ //SET 0 (HL)
+            uint8_t val = read(HL.full);
+            op_set(0,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xC7: //SET 0 A
@@ -1312,10 +1463,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xCE: //SET 1 (HL)
-            op_set(1, read(HL.full));
+        case 0xCE:{ //SET 1 (HL)
+            uint8_t val = read(HL.full);
+            op_set(1,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xCF: //SET 1 A
@@ -1360,10 +1514,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xD6: //SET 2 (HL)
-            op_set(2, read(HL.full));
+        case 0xD6:{ //SET 2 (HL)
+            uint8_t val = read(HL.full);
+            op_set(2,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xD7: //SET 2 A
@@ -1408,10 +1565,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xDE: //SET 3 (HL)
-            op_set(3, read(HL.full));
+        case 0xDE:{ //SET 3 (HL)
+            uint8_t val = read(HL.full);
+            op_set(3,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xDF: //SET 3 A
@@ -1456,10 +1616,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xE6: //SET 4 (HL)
-            op_set(4, read(HL.full));
+        case 0xE6:{ //SET 4 (HL)
+            uint8_t val = read(HL.full);
+            op_set(4,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xE7: //SET 4 A
@@ -1504,10 +1667,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xEE: //SET 5 (HL)
-            op_set(5, read(HL.full));
+        case 0xEE:{ //SET 5 (HL)
+            uint8_t val = read(HL.full);
+            op_set(5,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xEF: //SET 5 A
@@ -1552,10 +1718,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xF6: //SET 6 (HL)
-            op_set(6, read(HL.full));
+        case 0xF6:{ //SET 6 (HL)
+            uint8_t val = read(HL.full);
+            op_set(6,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xF7: //SET 6 A
@@ -1600,10 +1769,13 @@ void Gameboy::decode2(uint8_t opcode){
             PC.full += 2;
         break;
     
-        case 0xFE: //SET 7 (HL)
-            op_set(7, read(HL.full));
+        case 0xFE:{ //SET 7 (HL)
+            uint8_t val = read(HL.full);
+            op_set(7,val);
+            write(HL.full,val);
             cycles += 16;
             PC.full += 2;
+        }
         break;
     
         case 0xFF: //SET 7 A

@@ -38,6 +38,7 @@ void GPU::draw_display(Gameboy &emu){
         }
     }
     draw_debugger(emu);
+    
     //present the drawn canvas
     SDL_RenderPresent(renderer);
     SDL_Delay(50);
@@ -67,6 +68,7 @@ void GPU::draw_debugger(Gameboy &emu){
     uint8_t e = emu.get_E();
     uint8_t h = emu.get_H();
     uint8_t l = emu.get_L();
+    uint8_t op = emu.get_OP();
     uint8_t *mem = emu.get_mem();
     
     //create a new window called "Registers
@@ -101,7 +103,7 @@ void GPU::draw_debugger(Gameboy &emu){
     ImGui::Text("Z:%d", flags.test(7));
     ImGui::Text("N:%d", flags.test(6));
     ImGui::Text("HC:%d", flags.test(5));
-    ImGui::Text("N:%d", flags.test(4));
+    ImGui::Text("C:%d", flags.test(4));
     
     
     ImGui::End();
@@ -122,6 +124,10 @@ void GPU::draw_debugger(Gameboy &emu){
         ImGui::Text("0x%X", *(mem+i));
     }
     
+    ImGui::End();
+    
+    ImGui::Begin("Executed Codes");
+    ImGui::Text("Code:0x%X", op);
     ImGui::End();
     
     ImGui::Render();

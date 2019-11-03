@@ -28,7 +28,7 @@ class Gameboy {
         Register PC;
         
         void initialize();
-        void emulateCycle();
+        void loadLogo();
         void decode1(uint8_t opcode);
         void decode2(uint8_t opcode);
         
@@ -47,9 +47,11 @@ class Gameboy {
         void unset_flag(int f);
         bool check_flag(int f);
         void flip_flag(int f);
+        void set_pre_flags(uint8_t &val);
+        void set_unpre_flags();
         void op_cpl();
-        void op_8bit_load(uint8_t r1, uint8_t r2);
-        void op_16bit_load(Register dd, uint16_t nn);
+        void op_8bit_load(uint8_t &r1, uint8_t r2);
+        void op_16bit_load(Register &r);
         void op_8bit_add(uint8_t v);
         void op_8bit_subtract(uint8_t s);
         void op_8bit_and(uint8_t s);
@@ -57,28 +59,26 @@ class Gameboy {
         void op_8bit_xor(uint8_t s);
         void op_8bit_compare(uint8_t s);
         void op_16bit_add_to_hl(uint16_t ss);
-        void op_rotate(uint8_t val);
-        void op_shift(uint8_t val);
-        void op_swap(uint8_t val);
-        void op_bit(int b, uint8_t val);
-        void op_set(int b, uint8_t val);
-        void op_reset(int b, uint8_t val);
+        void op_rotate(uint8_t &val);
+        void op_shift(uint8_t &val);
+        void op_swap(uint8_t &val);
+        void op_bit(int b, uint8_t &val);
+        void op_set(int b, uint8_t &val);
+        void op_reset(int b, uint8_t &val);
         void op_jump();
         void op_jump_signed(int8_t e);
         void op_call();
         void op_return();
         void op_restart(uint8_t p);
         void op_push(Register qq);
-        void op_pop(Register qq);
+        void op_pop(Register &qq);
         void op_DAA();
         
     public:
         Gameboy();
         ~Gameboy();
         
-        bool lcd_set;
-        void lcd_control();
-        
+        void emulateCycle();
         void debug();
         void print_char();
         void tile_data();
@@ -104,6 +104,7 @@ class Gameboy {
         uint8_t get_H();
         uint8_t get_L();
         uint8_t get_F();
+        uint8_t get_OP();
 };
 
 #endif
