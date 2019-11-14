@@ -28,7 +28,7 @@ class Gameboy {
         Register PC;
         
         void initialize();
-        void loadLogo();
+        void emulateCycle();
         void decode1(uint8_t opcode);
         void decode2(uint8_t opcode);
         
@@ -78,10 +78,7 @@ class Gameboy {
         Gameboy();
         ~Gameboy();
         
-        void emulateCycle();
-        void debug();
-        void print_char();
-        void tile_data();
+        
         void emuLoop();
         bool loadGame(const char* filename);
         uint8_t read(uint16_t address);

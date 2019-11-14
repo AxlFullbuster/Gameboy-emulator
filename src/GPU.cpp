@@ -7,7 +7,7 @@ using std::endl;
 using std::bitset;
 
 
-GPU::GPU(){
+GPU::GPU(Gameboy &emulator) : emu(emulator){
     //Do Nothing
 }
 
@@ -15,29 +15,87 @@ GPU::~GPU(){
     //Do Nothing
 }
 
+/*compares these two registers, depending on their values
+ *the GPU will trigger a stat interrupt
+ */
+bool GPU::stat_interrupt(){
+    if(yCoordinate == lyCompare){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+//initialize various registers in the Gameboy GPU
+void GPU::init_registers(){
+    scrollY = emu.read(0xFF42);
+    scrollX = emu.read(0xFF43);
+    yCoordinate = emu.read(0xFF44);
+    lyCompare = emu.read(0xFF45);
+    winY = emu.read(0xFF4A);
+    winX = emu.read(0xFF4B);
+    bg_palette = emu.read(0xFF47);
+    obj_palette0 = emu.read(0xFF48);
+    obj_palette1 = emu.read(0xFF49);
+    DMA = emu.read(0xFF46);
+}
+
+//holds the individual bits in the lcd control registers
+void GPU::lcd_control(){
+    bitset<8> control = emu.read(0xFF40);
+    
+    enableLCD = control.test(7);
+    windowTileMap = control.test(6);
+    enableWindow = control.test(5);
+    bg_windowTile = control.test(4);
+    bgTileMap = control.test(3);
+    spriteSize = control.test(2);
+    enableSprites = control.test(1);
+    enablebg = control.test(0);
+}
+
+//holds the individual bits in the lcd status register
+void GPU::lcd_status(){
+    bitset<8> status = emu.read(0xFF41);
+    
+    lyc = status.test(6);
+    mode2_OAM = status.test(5);
+    mode1_Vblank = status.test(4);
+    mode0_Hblank = status.test(3);
+    coincidence = status.test(2);
+    flag1 = status.test(1);
+    flag0 = status.test(0);
+}
+
 //draw onto the screen
-void GPU::draw_display(Gameboy &emu){
+void GPU::draw_display(){
+    lcd_control();
     //set to light blue
     SDL_SetRenderDrawColor(renderer, 114, 144, 154, 255);
     SDL_RenderClear(renderer);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_Rect pixel;
     
-    /* draw white pixels onto the 144*166 canvas
-     * draw black for everything else
-     * set the pixels to be 8x8 in size and then scale
-     * them to the current screen width and height
-     */
-    for(int y = 0; y < 144; ++y){
-        for(int x = 0; x < 160 ; ++x) {
-            pixel.x = x*sx;
-            pixel.y = y*sy;
-            pixel.w = 8;
-            pixel.h = 8;
-            SDL_RenderFillRect(renderer,&pixel);  
+    if(enableLCD){
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_Rect pixel;
+        
+        /* draw white pixels onto the 144*166 canvas
+         * draw black for everything else
+         * set the pixels to be 8x8 in size and then scale
+         * them to the current screen width and height
+         */
+        for(int y = 0; y < 144; ++y){
+            for(int x = 0; x < 160 ; ++x) {
+                pixel.x = x*sx;
+                pixel.y = y*sy;
+                pixel.w = 8;
+                pixel.h = 8;
+                SDL_RenderFillRect(renderer,&pixel);  
+            }
         }
     }
-    draw_debugger(emu);
+    if(debug){
+        draw_debugger();
+    }
     
     //present the drawn canvas
     SDL_RenderPresent(renderer);
@@ -45,14 +103,14 @@ void GPU::draw_display(Gameboy &emu){
 }
 
 /*
- *prints out the values of all registers
+ *prints out the values of all registers,
  *and values stored in memory
  *using the ImGui Library.
  */
-void GPU::draw_debugger(Gameboy &emu){
+void GPU::draw_debugger(){
     ImGui::NewFrame();
     
-    //get bits in flag register
+    //get the CPU register values
     bitset<8> flags = emu.get_F();
     uint16_t pc = emu.get_PC();
     uint16_t af = emu.get_AF();
@@ -126,6 +184,7 @@ void GPU::draw_debugger(Gameboy &emu){
     
     ImGui::End();
     
+    //print out the executed operation code
     ImGui::Begin("Executed Codes");
     ImGui::Text("Code:0x%X", op);
     ImGui::End();

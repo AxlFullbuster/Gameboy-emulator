@@ -8,21 +8,23 @@ The goal of this project is to create an emulator that can run games somewhat ac
 There are currently no plans to emulate sound and memory banking past the first type.    
 
 # Current Progress  
-Finished opcode implementation. Will need to test them using Blargg's test roms.  
+Finished opcode testing. Currently working on GPU. 
 
-# References  
+# References/Resources    
 [Gameboy Development Manual Version 1.1](https://archive.org/details/GameBoyProgManVer1.1)  
 [GameLad Development Wiki](https://github.com/Dooskington/GameLad/wiki)  
 [Gameboy Operation Code Table](https://izik1.github.io/gbops/)  
-[tcbrindle's CMake Scripts](https://github.com/tcbrindle/sdl2-cmake-scripts)
+[tcbrindle's CMake Scripts](https://github.com/tcbrindle/sdl2-cmake-scripts)  
+[imgui library](https://github.com/ocornut/imgui)  
+[imgui_sdl library](https://github.com/Tyyppi77/imgui_sdl)  
 
 # Compiling Instructions  
 The program uses cmake to compile so here is what you'll need to do.  
-In the directory "CMakeLists.txt" is located enter these commands:  
+In the root directory of this project type in these commands:  
 ```
 cmake .
 make
 build/Gameboy *Rom file name*
 ```
   
-Note that the rom file should be in the same directory as the "CMakeLists.txt" file.
+Note that the rom file should als0 be in the root directory when entering the commands above.

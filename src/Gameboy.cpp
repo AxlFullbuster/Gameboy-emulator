@@ -25,10 +25,6 @@ Gameboy::~Gameboy(){
 
 //initialize the emulator values to the ones given in the boot rom
 void Gameboy::initialize(){
-    //clear memory
-    for(int i = 0x0000; i < 0x10000; ++i){
-         memory[i] = 0x00;
-    }
  
     PC.full = 0x100;
     SP.full = 0xFFFE;
@@ -39,6 +35,9 @@ void Gameboy::initialize(){
     
     cycles = 0;
 
+    memory[0xFF05] = 0x00;
+    memory[0xFF06] = 0x00;
+    memory[0xFF07] = 0x00;
     memory[0xFF10] = 0x80; 
     memory[0xFF11] = 0xBF; 
     memory[0xFF12] = 0xF3; 
@@ -51,45 +50,23 @@ void Gameboy::initialize(){
     memory[0xFF1C] = 0x9F; 
     memory[0xFF1E] = 0xBF; 
     memory[0xFF20] = 0xFF;
+    memory[0xFF21] = 0x00;
+    memory[0xFF22] = 0x00;
     memory[0xFF23] = 0xBF; 
     memory[0xFF24] = 0x77; 
     memory[0xFF25] = 0xF3; 
     memory[0xFF26] = 0xF1;
     memory[0xFF40] = 0x91;
+    memory[0xFF42] = 0x00;
+    memory[0xFF43] = 0x00;
+    memory[0xFF45] = 0x00;
     memory[0xFF47] = 0xFC; 
     memory[0xFF48] = 0xFF; 
     memory[0xFF49] = 0xFF;
+    memory[0xFF4A] = 0x00;
+    memory[0xFF4B] = 0x00;
+    memory[0xFFFF] = 0x00;
 }
-
-void Gameboy::loadLogo(){
-    memory[0x0104] = 0xCE;
-    memory[0x0105] = 0xED;
-    memory[0x0106] = 0x66;
-    memory[0x0107] = 0x66;
-    memory[0x0108] = 0xCC;
-    memory[0x0109] = 0x0D;
-    memory[0x0111] = 0x0B;
-    memory[0x0112] = 0x03;
-    memory[0x0113] = 0x73;
-    memory[0x0115] = 0x83;
-    memory[0x0117] = 0x0C;
-    memory[0x0119] = 0x0D;
-    memory[0x0121] = 0x08;
-    memory[0x0122] = 0x11;
-    memory[0x0123] = 0x1F;
-    memory[0x0124] = 0x88;
-    memory[0x0125] = 0x89;
-    memory[0x0127] = 0x0E;
-    memory[0x0128] = 0xDC;
-    memory[0x0129] = 0xCC;
-    memory[0x0130] = 0x6E;
-    memory[0x0131] = 0xE6;
-    memory[0x0132] = 0xDD;
-    memory[0x0133] = 0xDD;
-    memory[0x0134] = 0xD9;   
-}
-
-
 
 //runs the emulation loop for one frame then refresh the screen
 void Gameboy::emuLoop(){
@@ -99,11 +76,12 @@ void Gameboy::emuLoop(){
         //other junk
     }
     //refresh screen;
+    
     cycles -=70244;
 }
 
 void Gameboy::emulateCycle(){
-    opcode = read(PC.full);
+ opcode = read(PC.full);
     if(opcode != 0xCB){
        decode1(opcode);
     }else {
@@ -132,12 +110,9 @@ void Gameboy::write(uint16_t address, uint8_t data){
     }
 }
 
-
-  
 //load the game into memory
 bool Gameboy::loadGame(const char* filename){
-    //uncomment the line below to have the emulator draw to the screen
-    //initialize();
+    initialize();
     ifstream rom(filename, ios::in | ios::binary | ios::ate);
     streamsize size = rom.tellg();
     rom.seekg(0, ios::beg);
@@ -156,6 +131,13 @@ bool Gameboy::loadGame(const char* filename){
     rom.close();
     return true;
 }
+
+/*set, unset, check, or flip the flag value given in f
+ * 7 = Z flag
+ * 6 = N flag
+ * 5 = HC flag
+ * 4 = C flag
+ */
 
 void Gameboy::set_flag(int f){
    bitset<8> flag(AF.low);

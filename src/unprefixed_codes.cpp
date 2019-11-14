@@ -281,7 +281,7 @@ void Gameboy::decode1(uint8_t opcode){
                 cycles += 12;
             }else{
                 cycles += 8;
-                PC.full++;
+                PC.full +=2;
             }
         break;
     
@@ -295,7 +295,7 @@ void Gameboy::decode1(uint8_t opcode){
             write(HL.full, AF.high);
             HL.full++;
             cycles += 8;
-            PC.full += 2;;
+            PC.full ++;
         break;
     
         case 0x23: //INC HL
@@ -350,7 +350,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_jump_signed(read(PC.full + 1));
             }else{
                 cycles += 8;
-                PC.full++;
+                PC.full+= 2;
             }
         break;
     
@@ -419,7 +419,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_jump_signed(read(PC.full + 1));
             }else{
                 cycles += 8;
-                PC.full++;
+                PC.full += 2;
             }
         break;
     
@@ -494,7 +494,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_jump_signed(read(PC.full + 1));
             }else{
                 cycles += 8;
-                PC.full++;
+                PC.full += 2;
             }
         break;
     
@@ -532,7 +532,7 @@ void Gameboy::decode1(uint8_t opcode){
         break;
     
         case 0x3D: //DEC A
-            BC.high--;
+            AF.high--;
             set_flag(6);
             if(AF.high == 0) set_flag(7);
             else unset_flag(7);
@@ -1384,7 +1384,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_jump();
             }else{
                 cycles += 12;
-                PC.full++;
+                PC.full += 3;
             }
         break;
     
@@ -1400,7 +1400,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_call();
             }else{
                 cycles += 12;
-                PC.full++;
+                PC.full += 3;
             }
         break;
     
@@ -1442,7 +1442,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_jump();
             }else{
                 cycles += 12;
-                PC.full++;
+                PC.full += 3;
             }
         break;
         
@@ -1452,7 +1452,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_call();
             }else{
                 cycles += 12;
-                PC.full++;
+                PC.full += 3;
             }
         break;
     
@@ -1496,7 +1496,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_jump();
             }else{
                 cycles += 12;
-                PC.full++;
+                PC.full += 3;
             }
         break;
     
@@ -1512,7 +1512,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_call();
             }else{
                 cycles += 12;
-                PC.full++;
+                PC.full += 3;
             }
         break;
     
@@ -1558,7 +1558,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_jump();
             }else{
                 cycles += 12;
-                PC.full++;
+                PC.full += 3;
             }
         break;
     
@@ -1573,7 +1573,7 @@ void Gameboy::decode1(uint8_t opcode){
                 op_call();
             }else{
                 cycles += 12;
-                PC.full++;
+                PC.full += 3;
             }
         break;
     
@@ -1667,6 +1667,7 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0xE9: //JP HL
             cycles += 4;
+            PC.full++;
             PC.full = HL.full;
         break;
     

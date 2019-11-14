@@ -8,7 +8,7 @@ using std::cin;
 using std::endl;
 
 Gameboy emu;
-GPU display;
+GPU display(emu);
 
 int main(int argc, char* argv[]){
     //check if rom file name was entered
@@ -16,6 +16,9 @@ int main(int argc, char* argv[]){
         cout << "Please provide a rom file to open." << endl;
         return 1;
     }
+    
+    cout << "Would you like to display the debugger? Yes(1), No(0): ";
+    cin >> display.debug;
     
     //check to make sure SDL initialized the window
     if(!display.init()){
@@ -69,7 +72,7 @@ int main(int argc, char* argv[]){
             io.MouseWheel = static_cast<float>(wheel);
             
             emu.emuLoop();
-            display.draw_display(emu);
+            display.draw_display();
         }
     }
     display.close();
