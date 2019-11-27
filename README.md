@@ -27,4 +27,4 @@ make
 build/Gameboy *Rom file name*
 ```
   
-Note that the rom file should als0 be in the root directory when entering the commands above.
+Note that the rom file should also be in the root directory when entering the commands above.
