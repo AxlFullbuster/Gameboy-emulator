@@ -3,12 +3,13 @@
 
 
 #include<SDL2/SDL.h>
+#include<bitset>
 #include "imgui.h"
 #include "imgui_sdl.h"
 #include "Gameboy.h"
 
 
-class GPU : Gameboy{
+class GPU : public Gameboy{
     private:
         //the GPU registers
         uint8_t scrollY;
@@ -22,35 +23,38 @@ class GPU : Gameboy{
         uint8_t obj_palette1;
         uint8_t DMA;
         
+        std::bitset<8> lcd_control;
+        std::bitset<8> lcd_status;
         
-        /*boolean values for the bits in the
-         *lcd control register
-         */
-        bool enableLCD;
-        bool windowTileMap;
-        bool enableWindow;
-        bool bg_windowTile;
-        bool bgTileMap;
-        bool spriteSize;
-        bool enableSprites;
-        bool enablebg;
+        int mode = 0;
+        int gpu_cycles = 456;
+        int red;
+        int green;
+        int blue;
         
-        /*boolean values for the bits in the
-         *lcd status register
-         */
-        bool lyc;
-        bool mode2_OAM;
-        bool mode1_Vblank;
-        bool mode0_Hblank;
-        bool coincidence;
-        bool flag1;
-        bool flag0;
+        bool bgColor;
+        bool obj0;
+        bool obj1;
         
-    
-        bool stat_interrupt();
+        
+        
+        uint8_t gfx[160 * 144 * 3];
+        
+        bool check_LCD();
+        void stat_interrupt();
         void init_registers();
-        void lcd_control();
-        void lcd_status();
+        void check_mode();
+        void check_scanline();
+        void draw_scanline();
+        void draw_tiles();
+        void draw_sprites();
+        int getBit(uint8_t byte,int pos);
+        int getDecimal(int high, int low);
+        void getColor(uint8_t byte1, uint8_t byte2, int pos);
+        uint16_t getTileData(uint8_t tileAddress);
+        
+        
+        
     
     public:
         SDL_Window* window = NULL;
@@ -65,10 +69,11 @@ class GPU : Gameboy{
         bool debug;
         
         bool init();
+        void gpuloop();
+        void draw_debugger();
+        void draw_display();
         void input();
         void close();
-        void draw_display();
-        void draw_debugger();
         void print();
         
         GPU(Gameboy &emulator);

@@ -4,7 +4,7 @@
 #include<stdint.h>
 
 
-class Gameboy {
+class Gameboy{
     private:
         uint8_t opcode;
         int cycles;
@@ -41,7 +41,7 @@ class Gameboy {
         bool reset7;
         bool reset0;
         
-        
+        void DMA(uint8_t data);
         //opcode functions
         void set_flag(int f);
         void unset_flag(int f);
@@ -83,6 +83,8 @@ class Gameboy {
         bool loadGame(const char* filename);
         uint8_t read(uint16_t address);
         void write(uint16_t address, uint8_t data);
+        void updateCycles(int value);
+        void increment_scanline();
         
         
         //methods for debugger
@@ -102,6 +104,7 @@ class Gameboy {
         uint8_t get_L();
         uint8_t get_F();
         uint8_t get_OP();
+        int get_cycles();
 };
 
 #endif

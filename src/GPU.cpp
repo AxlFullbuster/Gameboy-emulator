@@ -8,21 +8,38 @@ using std::bitset;
 
 
 GPU::GPU(Gameboy &emulator) : emu(emulator){
-    //Do Nothing
+    mode = 1;
+    gpu_cycles = 456;
+    emu.write(0xFF44, 0);
 }
 
 GPU::~GPU(){
     //Do Nothing
 }
 
+void GPU::gpuloop(){
+    int cycles = emu.get_cycles();
+        if(check_LCD()){
+            init_registers();
+            check_scanline();
+        }
+        draw_display();
+}
+
+bool GPU::check_LCD(){
+    if(!lcd_control.test(7))return false;
+    else return true;
+}
+
 /*compares these two registers, depending on their values
  *the GPU will trigger a stat interrupt
  */
-bool GPU::stat_interrupt(){
+void GPU::stat_interrupt(){
     if(yCoordinate == lyCompare){
-        return true;
+        lcd_status.set(2);
+        //do a stat interrupt
     }else{
-        return false;
+        lcd_status.reset(2);
     }
 }
 
@@ -38,68 +55,296 @@ void GPU::init_registers(){
     obj_palette0 = emu.read(0xFF48);
     obj_palette1 = emu.read(0xFF49);
     DMA = emu.read(0xFF46);
+    lcd_control = emu.read(0xFF40);
+    lcd_status = emu.read(0xFF41);
 }
 
-//holds the individual bits in the lcd control registers
-void GPU::lcd_control(){
-    bitset<8> control = emu.read(0xFF40);
-    
-    enableLCD = control.test(7);
-    windowTileMap = control.test(6);
-    enableWindow = control.test(5);
-    bg_windowTile = control.test(4);
-    bgTileMap = control.test(3);
-    spriteSize = control.test(2);
-    enableSprites = control.test(1);
-    enablebg = control.test(0);
+void GPU::check_mode(){
+    int currentmode = mode;
+    if(gpu_cycles >= 376){
+        mode = 2;
+        lcd_status.reset(0);
+        lcd_status.set(1);
+    }else if(gpu_cycles >= 204){
+        mode = 3;
+        lcd_status.set(0);
+        lcd_status.set(1);
+    }else{
+        mode = 0;
+        lcd_status.reset(0);
+        lcd_status.reset(1);
+    }
+    //call an interrupt if you changed modes
+    stat_interrupt();
 }
 
-//holds the individual bits in the lcd status register
-void GPU::lcd_status(){
-    bitset<8> status = emu.read(0xFF41);
-    
-    lyc = status.test(6);
-    mode2_OAM = status.test(5);
-    mode1_Vblank = status.test(4);
-    mode0_Hblank = status.test(3);
-    coincidence = status.test(2);
-    flag1 = status.test(1);
-    flag0 = status.test(0);
+void GPU::check_scanline(){
+    check_mode();
+    if(lcd_control.test(7)){
+        gpu_cycles = 456;
+        if(yCoordinate < 144){
+            draw_scanline();
+            emu.increment_scanline();
+        }else if(yCoordinate == 144){
+            //call a v-blank interrupt
+        }else{
+            emu.write(0xFF44, 0);
+        }
+    }
 }
+
+void GPU::draw_scanline(){
+    if(lcd_control.test(0)){
+        draw_tiles();
+    }
+    
+    if(lcd_control.test(1)){
+        draw_sprites();
+    }
+}
+
+int GPU::getBit(uint8_t byte, int pos){
+    int bit;
+    pos = 7 - (pos % 8);
+    
+    bit = (byte >> pos) & 0x1;
+    return bit;
+}
+
+int GPU::getDecimal(int high, int low){
+    if(high == 0 && low == 0) return 0;
+    else if(high == 0 && low == 1) return 1;
+    else if(high == 1 && low == 0) return 2;
+    else return 3;
+}
+
+void GPU::getColor(uint8_t byte1, uint8_t byte2, int pos){
+    int bit1 = getBit(byte1, pos);
+    int bit2 = getBit(byte2, pos);
+    int map = getDecimal(bit1, bit2);
+    bitset<8> palette;
+    
+    if(bgColor){
+        palette = bg_palette;
+    }else if(obj0){
+        palette = obj_palette0;
+    }else if(obj1){
+        palette = obj_palette1;
+    }
+    
+    int hi = 0;
+    int lo = 0;
+    
+    switch(map){
+        case 0:
+            hi = 1;
+            lo = 0;
+        break;
+    
+        case 1:
+            hi = 3;
+            lo = 2;
+        break;
+    
+        case 2:
+            hi = 5;
+            lo = 4;
+        break;
+    
+        case 3:
+            hi = 7;
+            lo = 6;
+        break;
+    }
+    
+    int color = getDecimal(palette[hi], palette[lo]);
+    
+     switch(color){
+        case 0:
+           red = 0xFF;
+           green = 0xFF;
+           blue = 0xFF;
+        break;
+    
+        case 1:
+           red = 0xD3;
+           green = 0xD3;
+           blue = 0xD3;
+        break;
+    
+        case 2:
+           red = 0xA9;
+           green = 0xA9;
+           blue = 0xA9;
+        break;
+    
+        case 3:
+           red = 0x00;
+           green = 0x00;
+           blue = 0x00;
+        break;
+    }
+}
+
+uint16_t GPU::getTileData(uint8_t tileAddress){
+    uint16_t memloc;
+    int16_t tilenum;
+    uint16_t tileData;
+    
+    if(lcd_control.test(4)){
+        memloc = 0x8000;
+        tilenum = (uint8_t)emu.read(tileAddress);
+        tileData = memloc + (tilenum * 16);
+        return tileData;
+    }
+    
+    memloc = 0x8000;
+    tilenum = (int8_t)emu.read(tileAddress);
+    tileData = memloc + ((tilenum + 128) * 16);
+    return tileData;
+}
+
+void GPU::draw_tiles(){
+    bgColor = true;
+    uint16_t bg_mem = 0;
+    uint8_t x = 0;
+    uint8_t y = 0;
+    bool window;
+    
+    if(lcd_control.test(5)){
+        if(winY <= yCoordinate){
+            window = true;
+        }
+    }
+    
+    if(!window){
+        if(lcd_control.test(3)){
+            bg_mem = 0x9C00;
+        }else{
+            bg_mem = 0x9800;
+        }
+        y = scrollY + yCoordinate;
+    }else{
+        if(lcd_control.test(6)){
+            bg_mem = 0x9C00;
+        }else{
+            bg_mem = 0x9800;
+        }
+        y = yCoordinate - winY;
+    }
+    
+    uint16_t tilerow = (((uint8_t) (y/8)) * 32);
+                        
+    for(int p = 0; p < 160; p++){
+        x = p + scrollX;
+        
+        if(window){
+            if(p >= winX){
+                x = p - winX;
+            }
+        }
+        
+        uint16_t tilecol = (x/8);
+        uint16_t tileloc;
+        uint16_t tileAddress = bg_mem + tilerow + tilecol;
+        tileloc = getTileData(tileAddress);
+        
+        uint8_t line = y % 8;
+        line *= 2;
+        uint8_t byte1 = emu.read(tileloc + line);
+        uint8_t byte2 = emu.read(tileloc + line + 1);
+        getColor(byte1, byte2, p);
+        
+        gfx[p * yCoordinate * 1] = red;
+        gfx[p * yCoordinate * 2] = green;
+        gfx[p * yCoordinate * 3] = blue;
+    }
+    bgColor = false;
+}
+
+void GPU::draw_sprites(){
+    uint8_t ysize;
+    if(lcd_control.test(2)){
+        ysize = 16;
+    }
+    
+    ysize = 8;
+    
+    for(int i = 0; i < 40; i++){
+        uint8_t index = i*4;
+        uint8_t ypos = emu.read(0xFE00 + index) - 16;
+        uint8_t xpos = emu.read(0xFE00 + index + 1) - 8;
+        uint8_t tiledata = emu.read(0xFE00 + index + 2);
+        uint8_t atri = emu.read(0xFE00 + index + 3);
+        
+        bitset<8> attributes(atri);
+        bool flipY = attributes.test(6);
+        bool flipX = attributes.test(5);
+        
+        if((yCoordinate >= ypos) && (yCoordinate < (ypos + ysize))){
+            int line = yCoordinate - ypos;
+            if(flipY){
+                line -= ysize;
+                line *= -1;
+            }
+            
+            line *= 2;
+            uint16_t address = (0x8000 + (tiledata * 16)) + line;
+            uint8_t byte1 = emu.read(address);
+            uint8_t byte2 = emu.read(address + 1);
+            
+            for(int j = 0; j < 8; j++){
+                int color = j;
+                
+                if(flipX){
+                    color = 7 - j;
+                }
+                
+                if(attributes.test(4)){
+                    obj0 = true;
+                    obj1 = false;
+                }else{
+                    obj0 = false;
+                    obj1 = true;
+                }
+                
+                getColor(byte1, byte2, color);
+                int xpix = j;
+                int pixel = xpos + xpix;
+                
+                gfx[pixel * yCoordinate * 1] = red;
+                gfx[pixel * yCoordinate * 2] = green;
+                gfx[pixel * yCoordinate * 3] = blue;
+            }
+        }
+    }
+}
+
+
 
 //draw onto the screen
 void GPU::draw_display(){
-    lcd_control();
     //set to light blue
     SDL_SetRenderDrawColor(renderer, 114, 144, 154, 255);
     SDL_RenderClear(renderer);
     
-    if(enableLCD){
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_Rect pixel;
-        
-        /* draw white pixels onto the 144*166 canvas
-         * draw black for everything else
-         * set the pixels to be 8x8 in size and then scale
-         * them to the current screen width and height
-         */
-        for(int y = 0; y < 144; ++y){
-            for(int x = 0; x < 160 ; ++x) {
-                pixel.x = x*sx;
-                pixel.y = y*sy;
-                pixel.w = 8;
-                pixel.h = 8;
-                SDL_RenderFillRect(renderer,&pixel);  
-            }
+    
+    //draw the color data stored in gfx onto the screen
+    for(int y = 0; y < 144; ++y){
+        for(int x = 0; x < 160; ++x) {
+            red = gfx[x * y * 1];
+            green = gfx[x * y * 2];
+            blue = gfx[x * y * 3];
+            SDL_SetRenderDrawColor(renderer, red, green, blue, 255);
+            SDL_RenderDrawPoint(renderer, x, y);
         }
     }
+    
     if(debug){
         draw_debugger();
     }
-    
     //present the drawn canvas
     SDL_RenderPresent(renderer);
-    SDL_Delay(50);
 }
 
 /*
@@ -108,6 +353,8 @@ void GPU::draw_display(){
  *using the ImGui Library.
  */
 void GPU::draw_debugger(){
+     
+    
     ImGui::NewFrame();
     
     //get the CPU register values
@@ -191,6 +438,9 @@ void GPU::draw_debugger(){
     
     ImGui::Render();
     ImGuiSDL::Render(ImGui::GetDrawData());
+    
+    SDL_RenderPresent(renderer);
+    SDL_Delay(50);
 }
 
 

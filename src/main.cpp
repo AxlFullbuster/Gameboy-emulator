@@ -72,7 +72,7 @@ int main(int argc, char* argv[]){
             io.MouseWheel = static_cast<float>(wheel);
             
             emu.emuLoop();
-            display.draw_display();
+            display.gpuloop();
         }
     }
     display.close();

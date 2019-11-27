@@ -76,20 +76,19 @@ void Gameboy::emuLoop(){
         //other junk
     }
     //refresh screen;
-    
     cycles -=70244;
 }
 
+//does the fetch, decode, and execute cycle
 void Gameboy::emulateCycle(){
  opcode = read(PC.full);
     if(opcode != 0xCB){
        decode1(opcode);
     }else {
-        opcode = read(PC.full + 1);
+        opcode = read(PC.full +1);
         decode2(opcode);
     }
 }
-
 
 //read from memory space
 uint8_t Gameboy::read(uint16_t address){
@@ -105,9 +104,24 @@ void Gameboy::write(uint16_t address, uint8_t data){
        write(address - 0x2000, data);
     }else if(address >= 0xFEA0 && address <= 0xFEFF){
        //don't write here the gameboy will get mad
+    }else if(address == 0xFF44){
+       //all writes to the scanline will reset the value
+       memory[address] = 0;
+    }else if(address == 0xFF46){
+       DMA(data);
     }else{
        memory[address] = data;
     }
+}
+
+//A method that the GPU will use to update the cycle value
+void Gameboy::updateCycles(int value){
+   cycles += value;
+}
+
+//A method for the GPU which increments the scaline value by 1
+void Gameboy::increment_scanline(){
+   memory[0xFF44]++;
 }
 
 //load the game into memory
@@ -130,6 +144,15 @@ bool Gameboy::loadGame(const char* filename){
       
     rom.close();
     return true;
+}
+
+
+void Gameboy::DMA(uint8_t data){
+   uint16_t address = data << 8;
+   
+   for(int i = 0; i < 0xA0; i++){
+    write(0xFE00+i, read(address+i));
+   }
 }
 
 /*set, unset, check, or flip the flag value given in f
@@ -187,15 +210,18 @@ void Gameboy::set_unpre_flags(){
    else unset_flag(4);
 }
 
+//loads an 8-bit register into another
 void Gameboy::op_8bit_load(uint8_t &r1, uint8_t r2){
     r1 = r2;
 }
 
+//loads a 16-bit register into another
 void Gameboy::op_16bit_load(Register &r){
     r.low = read(PC.full + 1);
     r.high = read(PC.full + 2);
 }
  
+//adds an 8-bit value to the A register
  void Gameboy::op_8bit_add(uint8_t v){
      AF.high += v;
      unset_flag(6);
@@ -224,7 +250,8 @@ void Gameboy::op_16bit_load(Register &r){
      }
  }
  
- 
+
+//subtracts an 8-bit value from the A register
  void Gameboy::op_8bit_subtract(uint8_t s){
     AF.high -= s;
     set_flag(6);
@@ -252,7 +279,8 @@ void Gameboy::op_16bit_load(Register &r){
     }
  }
  
- 
+
+//bitwise and an 8-bit value with the A register
  void Gameboy::op_8bit_and(uint8_t s){
     AF.high &= s;
     unset_flag(6);
@@ -266,6 +294,7 @@ void Gameboy::op_16bit_load(Register &r){
     }
  }
  
+//bitwise or an 8-bit value with the A register
  void Gameboy::op_8bit_or(uint8_t s){
     AF.high |= s;
     unset_flag(6);
@@ -280,6 +309,7 @@ void Gameboy::op_16bit_load(Register &r){
     }
  }
  
+//xor an 8-bit value with the A register
  void Gameboy::op_8bit_xor(uint8_t s){
     AF.high ^= s;
     unset_flag(6);
@@ -293,6 +323,7 @@ void Gameboy::op_16bit_load(Register &r){
     }
  }
  
+//compares A with an 8-bit value
  void Gameboy::op_8bit_compare(uint8_t s){
     set_flag(6);
     
@@ -315,6 +346,7 @@ void Gameboy::op_16bit_load(Register &r){
     }
 }
  
+//adds a 16-bit value to the HL register
  void Gameboy::op_16bit_add_to_hl(uint16_t ss){
     unset_flag(6);
     HL.full += ss;
@@ -331,6 +363,7 @@ void Gameboy::op_16bit_load(Register &r){
     }
 }
  
+//Have the PC jump to the value specified in the next 2 bytes in memory
  void Gameboy::op_jump(){
       Register nn;
       nn.low = read(PC.full + 1);
@@ -339,11 +372,14 @@ void Gameboy::op_16bit_load(Register &r){
       PC.full = nn.full;
  }
  
+ 
+//Have the PC jump to the sum of it's original value and a signed integer
  void Gameboy::op_jump_signed(int8_t e){
       PC.full += 2;
       PC.full += e;
  }
  
+//rotate the bits in an 8-bit value
  void Gameboy::op_rotate(uint8_t &val){
      bitset<8> bit(val);
      bitset<8> flag(AF.low);
@@ -367,6 +403,7 @@ void Gameboy::op_16bit_load(Register &r){
      AF.low = flag.to_ulong();
  }
  
+//shift the bits in an 8-bit value
  void Gameboy::op_shift(uint8_t &val){
     bitset<8> bit(val);
     bitset<8> flag(AF.low);
@@ -392,6 +429,7 @@ void Gameboy::op_16bit_load(Register &r){
     set_pre_flags(val);
  }
  
+//swap the lower bit values with the higer bit values
  void Gameboy::op_swap(uint8_t &val){
     bitset<8> bit(val);
     unset_flag(6);
@@ -407,6 +445,7 @@ void Gameboy::op_16bit_load(Register &r){
     }
  }
  
+//check if a bit is set
  void Gameboy::op_bit(int b, uint8_t &val){
     bitset<8> bit(val);
     unset_flag(6);
@@ -418,12 +457,14 @@ void Gameboy::op_16bit_load(Register &r){
     }
  }
  
+//set a specific bit
  void Gameboy::op_set(int b, uint8_t &val){
     bitset<8> bit(val);
     bit.set(b);
     val = bit.to_ulong();
  }
  
+//unset a specfic bit
  void Gameboy::op_reset(int b, uint8_t &val){
    bitset<8> bit(val);
    bit.reset(b);
@@ -565,6 +606,9 @@ uint8_t Gameboy::get_OP(){
     return opcode;
 }
  
+int Gameboy::get_cycles(){
+    return cycles;
+}
  
  
  
