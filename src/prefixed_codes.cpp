@@ -1,8 +1,8 @@
-#include "Gameboy.h"
+#include "CPU.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-void Gameboy::decode2(uint8_t opcode){
+void CPU::decode2(uint8_t opcode){
     switch(opcode){
         case 0x00: //RLC B
             left = true;

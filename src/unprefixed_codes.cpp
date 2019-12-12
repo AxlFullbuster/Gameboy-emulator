@@ -1,8 +1,8 @@
-#include "Gameboy.h"
+#include "CPU.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-void Gameboy::decode1(uint8_t opcode){
+void CPU::decode1(uint8_t opcode){
     switch(opcode){
         case 0x00: // NOP 
             cycles += 4;
@@ -64,9 +64,11 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x07: //RLCA
             left = true;
+            A = true;
             op_rotate(AF.high);
             set_unpre_flags();
             left = false;
+            A = false;
             cycles += 4;
             PC.full++;
         break;
@@ -137,8 +139,10 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x0F: //RRCA
             right = true;
+            A = true;
             op_rotate(AF.high);
             right = false;
+            A = false;
             set_unpre_flags();
             cycles += 4;
             PC.full++;
@@ -203,8 +207,10 @@ void Gameboy::decode1(uint8_t opcode){
     
         case 0x17: //RLA
             left = true;
+            A = true;
             op_rotate(AF.high);
             left = false;
+            A = false;
             PC.full++;
             cycles += 4;
         break;
@@ -1671,11 +1677,13 @@ void Gameboy::decode1(uint8_t opcode){
             PC.full = HL.full;
         break;
     
-        case 0xEA: //LD (u16) A
-            write(read(PC.full + 1), AF.high);
-            write(read(PC.full + 2), AF.high);
+        case 0xEA:{ //LD (u16) A
+            Register val;
+            op_16bit_load(val);
+            write(val.full, AF.high);
             cycles += 16;
             PC.full += 3;
+        }
         break;
         
         case 0xEB: //NOP

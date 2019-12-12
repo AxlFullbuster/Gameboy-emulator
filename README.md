@@ -8,7 +8,7 @@ The goal of this project is to create an emulator that can run games somewhat ac
 There are currently no plans to emulate sound and memory banking past the first type.    
 
 # Current Progress  
-Finished opcode testing. Currently working on GPU. 
+GPU has been implemented. Currently working on MBC1 support and CPU debugging.
 
 # References/Resources    
 [Gameboy Development Manual Version 1.1](https://archive.org/details/GameBoyProgManVer1.1)  

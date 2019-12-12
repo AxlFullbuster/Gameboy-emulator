@@ -1,14 +1,13 @@
-#ifndef GAMEBOY_H
-#define GAMEBOY_H
+#ifndef CPU_H
+#define CPU_H
 
 #include<stdint.h>
 
 
-class Gameboy{
+class CPU{
     private:
         uint8_t opcode;
         int cycles;
-        
         
         uint8_t memory[0x10000];
         
@@ -28,7 +27,6 @@ class Gameboy{
         Register PC;
         
         void initialize();
-        void emulateCycle();
         void decode1(uint8_t opcode);
         void decode2(uint8_t opcode);
         
@@ -40,8 +38,12 @@ class Gameboy{
         bool IME;
         bool reset7;
         bool reset0;
+        bool A;
+        
         
         void DMA(uint8_t data);
+        void load_bios();
+        
         //opcode functions
         void set_flag(int f);
         void unset_flag(int f);
@@ -74,18 +76,23 @@ class Gameboy{
         void op_pop(Register &qq);
         void op_DAA();
         
+        
+     
     public:
-        Gameboy();
-        ~Gameboy();
+        CPU();
+        ~CPU();
         
         
-        void emuLoop();
+        int timing;
+        
         bool loadGame(const char* filename);
-        uint8_t read(uint16_t address);
-        void write(uint16_t address, uint8_t data);
-        void updateCycles(int value);
-        void increment_scanline();
+        bool bios;
         
+        void emulateCycle();
+        void increment_scanline();
+    
+       
+        int get_cycles(int prev);
         
         //methods for debugger
         uint16_t get_AF();
@@ -104,7 +111,9 @@ class Gameboy{
         uint8_t get_L();
         uint8_t get_F();
         uint8_t get_OP();
-        int get_cycles();
+        
+        uint8_t read(uint16_t address);
+        void write(uint16_t address, uint8_t data);
 };
 
 #endif

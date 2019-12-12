@@ -1,4 +1,4 @@
-#include "Gameboy.h"
+#include "CPU.h"
 #include "GPU.h"
 #include <iostream>
 #include <string>
@@ -7,8 +7,22 @@ using std::cout;
 using std::cin;
 using std::endl;
 
-Gameboy emu;
+CPU emu;
 GPU display(emu);
+
+//runs the emulation loop for one frame then refresh the screen
+void emulate(){
+    int grand_cycles = 0;
+    while(grand_cycles < 70244){
+        emu.emulateCycle();
+        grand_cycles += emu.timing;
+        display.init_registers();
+        display.check_scanline();
+       //handle interputs
+       //other junk  
+    }
+    //at this point the gpu class will draw the screen
+}
 
 int main(int argc, char* argv[]){
     //check if rom file name was entered
@@ -19,6 +33,8 @@ int main(int argc, char* argv[]){
     
     cout << "Would you like to display the debugger? Yes(1), No(0): ";
     cin >> display.debug;
+    cout << "Are you trying to run the bios rom? Yes(1), No(0): ";
+    cin >> emu.bios;
     
     //check to make sure SDL initialized the window
     if(!display.init()){
@@ -71,8 +87,8 @@ int main(int argc, char* argv[]){
             io.MouseDown[1] = buttons & SDL_BUTTON(SDL_BUTTON_RIGHT);
             io.MouseWheel = static_cast<float>(wheel);
             
-            emu.emuLoop();
-            display.gpuloop();
+            display.draw_debugger();
+            emulate();
         }
     }
     display.close();
