@@ -26,7 +26,7 @@ CPU::~CPU(){
 //initialize the emulator values to the ones given in the boot rom
 void CPU::initialize(){
  
-    PC.full = 0x100;
+    PC.full = 0x0100;
     SP.full = 0xFFFE;
     AF.full = 0x01B0;
     BC.full = 0x0013;
@@ -68,12 +68,21 @@ void CPU::initialize(){
     memory[0xFFFF] = 0x00;
 }
 
+void CPU::clearMemory(){
+  for(int i = 0; i < 0x10000; i++){
+    memory[i] = 0x00;
+  }
+}
+
 
 //does the fetch, decode, and execute cycle
 void CPU::emulateCycle(){
-if(read(0xFF50) == 1){
+if( PC.full == 0xDEF8 && opcode == 0x47 && AF.full == 0x00F0){
+  //printf("0x%X ", opcode);
   return;
 }
+
+
    int current_cycle = cycles;
      opcode = read(PC.full);
         if(opcode != 0xCB){
@@ -87,14 +96,33 @@ if(read(0xFF50) == 1){
 
 //read from memory space
 uint8_t CPU::read(uint16_t address){
+  if(MBC){
+    if(address >= 0x4000 && address <= 0x7FFF){
+      uint16_t newAddress = address - 0x4000;
+      return ROM[newAddress +  (romBank * 0x4000)];
+    }else if(address >= 0xA000 && address <= 0xBFFF){
+      uint16_t newAddress = address - 0xA000;
+      return ROM[newAddress + (ramBank * 0x2000)];
+    }else{
+      return memory[address];
+    }
+  }else{
     return memory[address];
+  }
 }
 
 //write to memory space
 void CPU::write(uint16_t address, uint8_t data){
-    if(address >= 0x0000 && address <= 0x7FFF){
-       //can't write to rom
-       return;
+    if(address < 0x8000){
+       if(MBC) changeBank(address, data);
+       else return;
+    }else if(address >= 0xA000 && address <= 0xBFFF){
+        if(extRAM){
+          uint16_t newAddress = address - 0xA000;
+          RAM[newAddress + (ramBank * 0x2000)] = data;
+        }else{
+          return;
+        }
     }else if(address >= 0xE000 && address <= 0xFDFF){
        memory[address] = data;
        write(address - 0x2000, data);
@@ -109,6 +137,41 @@ void CPU::write(uint16_t address, uint8_t data){
     }else{
        memory[address] = data;
     }
+}
+
+void CPU::changeBank(uint16_t address, uint8_t data){
+  if(address < 0x2000){
+    unsigned value = data & 0xF;
+    if(value == 0x0A) extRAM = true;
+    else extRAM = false;
+  }else if(address >= 0x2000 && address <= 0x3FFF){
+    unsigned bits = data & 0x1F;
+    romBank &= ~0x1F;
+    romBank |= bits;
+    if(romBank == 0x00 || romBank == 0x20 || romBank == 0x40 || romBank == 0x60){
+      romBank++;
+    }
+  }else if(address >= 0x4000 && address <= 0x5FFF){
+    unsigned banknum = data & 0x11;
+    if(rombanking){
+      romBank &= 0x1F;
+      data &= ~0x1F;
+      romBank |= data;
+      if(romBank == 0x00 || romBank == 0x20 || romBank == 0x40 || romBank == 0x60){
+        romBank++;
+      }
+    }else{
+      ramBank = banknum;
+    }
+  }else if(address >=0x6000 && address <= 0x7FFF){
+    unsigned check = data & 0x01;
+    if(check == 0){
+      rombanking = true;
+      ramBank = 0;
+    }else{
+     rombanking = false;
+    }
+  }
 }
 
 
@@ -172,12 +235,20 @@ void CPU::load_bios(){
    
 }
 
+void CPU::checkBank(){
+  if(ROM[0x147] == 1 || ROM[0x147] == 2 || ROM[0x147] == 3){
+    romBank = 1;
+    ramBank = 0;
+    MBC = true;
+  }else{
+    MBC = false;
+  }
+}
+
 
 //load the game into memory
 bool CPU::loadGame(const char* filename){
-  if(bios) load_bios();
-  else initialize();
-    
+    clearMemory();
     ifstream rom(filename, ios::in | ios::binary | ios::ate);
     streamsize size = rom.tellg();
     rom.seekg(0, ios::beg);
@@ -186,7 +257,7 @@ bool CPU::loadGame(const char* filename){
     
     if (rom.read(buffer.data(), size)){
       for (int i = 0; i <= buffer.size(); i++) {
-      	memory[i] = buffer[i];
+      	ROM[i] = buffer[i];
       }
     } else {
         printf("Couldn't load file");
@@ -194,7 +265,14 @@ bool CPU::loadGame(const char* filename){
       }
     rom.close();
     
+    for(int i = 0; i < 0x8000; i++){
+        memory[i] = ROM[i];
+    }
     
+    if(bios) load_bios();
+    else initialize();
+    
+    checkBank();
     return true;
 }
 
@@ -267,66 +345,97 @@ void CPU::op_16bit_load(Register &r){
     r.low = read(PC.full + 1);
     r.high = read(PC.full + 2);
 }
- 
+
+void CPU::op_inc(uint8_t &val){
+  unset_flag(6);
+  
+  if((((val & 0xf) + (1 & 0xf)) & 0x10) == 0x10){
+        set_flag(5);
+     }else{
+       unset_flag(5);
+     }
+  
+  val++;
+  
+  if(val == 0) set_flag(7);
+  else unset_flag(7);
+}
+
+void CPU::op_dec(uint8_t &val){
+  set_flag(6);
+  
+  if((((val & 0xf) - (1 & 0xf)) & 0x10) == 0x10){
+        set_flag(5);
+     }else{
+       unset_flag(5);
+     }
+  
+  val--;
+  
+  if(val == 0) set_flag(7);
+  else unset_flag(7);
+}
+
 //adds an 8-bit value to the A register
  void CPU::op_8bit_add(uint8_t v){
-    uint8_t bef = AF.high;
-     AF.high += v;
-     unset_flag(6);
-  
-  
-     if(carrying){
-        AF.high++;
+     int c = 0;
+     if(carrying && check_flag(4)){
+        c = 1;
      }
      
-     if((((bef & 0xf) + (v & 0xf)) & 0x10) == 0x10){
+     if((((AF.high & 0xf) + (v & 0xf) + (c & 0xf) ) & 0x10) == 0x10){
             set_flag(5);
      }else{
        unset_flag(5);
      }
      
-     if((bef + v) > 0xFF){
+     if((AF.high + v + c) > 0xFF){
            set_flag(4);
      } else{
        unset_flag(4);
      }
      
+     AF.high = AF.high + v + c;
+     unset_flag(6);
+
      if((AF.high) == 0){
          set_flag(7);
      } else {
        unset_flag(7);
      }
-     
  }
  
 
 //subtracts an 8-bit value from the A register
  void CPU::op_8bit_subtract(uint8_t s){
-    set_flag(6);
-    
-    if(carrying){
-      AF.high++;
+    int c = 0;
+    if(carrying && check_flag(4)){
+        c = 1;
     }
     
-    if( (AF.high - s) == 0){
+    if((((AF.high & 0xf) - (s & 0xf) - (c & 0xf) ) & 0x10) == 0x10){
+            set_flag(5);
+     }else{
+       unset_flag(5);
+     }
+     
+     if((AF.high - s - c) < 0){
+        set_flag(4);
+     }else{
+       unset_flag(4);
+     }
+     
+    
+    AF.high = AF.high - s - c;
+    set_flag(6);
+    
+    if( (AF.high) == 0){
        set_flag(7);
     }else{
       unset_flag(7);
     }
     
-    if((((AF.high & 0xf) + (s & 0xf)) & 0x10) == 0x10){
-       set_flag(5);
-    }else{
-      unset_flag(5);
-    }
     
-    if((AF.high - s) < 0xFF){
-        set_flag(4);
-    }else{
-     unset_flag(4);
-    }
-    
-    AF.high -= s;
  }
  
 
@@ -336,13 +445,13 @@ void CPU::op_16bit_load(Register &r){
     unset_flag(4); 
     set_flag(5);
     
-    if( (AF.high & s) == 0){
+    AF.high &= s;
+    
+    if( (AF.high) == 0){
        set_flag(7);
     }else {
       unset_flag(7);
     }
-    
-    AF.high &= s;
  }
  
 //bitwise or an 8-bit value with the A register
@@ -352,13 +461,13 @@ void CPU::op_16bit_load(Register &r){
     unset_flag(5);
     
     
-    if( (AF.high | s) == 0){
+    AF.high |= s;
+    
+    if( (AF.high) == 0){
        set_flag(7);
     }else {
       unset_flag(7);
     }
-    
-    AF.high |= s;
  }
  
 //xor an 8-bit value with the A register
@@ -367,13 +476,13 @@ void CPU::op_16bit_load(Register &r){
     unset_flag(4);
     unset_flag(5);
     
-    if( (AF.high ^ s) == 0){
+    AF.high ^= s;
+    
+    if( (AF.high) == 0){
        set_flag(7);
     }else {
       unset_flag(7);
     }
-    
-    AF.high ^= s;
  }
  
 //compares A with an 8-bit value
@@ -386,7 +495,7 @@ void CPU::op_16bit_load(Register &r){
       unset_flag(7);
     }
     
-    if((((AF.high & 0xf) + (s & 0xf)) & 0x10) == 0x10){
+    if((((AF.high & 0xf) - (s & 0xf)) & 0x10) == 0x10){
        set_flag(5);
     }else {
       unset_flag(5);   
@@ -397,24 +506,30 @@ void CPU::op_16bit_load(Register &r){
     }else {
       unset_flag(4);
     }
+    
+    
 }
  
 //adds a 16-bit value to the HL register
- void CPU::op_16bit_add_to_hl(uint16_t ss){
-    unset_flag(6);
+ void CPU::op_16bit_add(uint16_t& r1, uint16_t r2){
+    Register R1;
+    Register R2;
+    R1.full = r1;
+    R2.full = r2;
     
-    if((((HL.full & 0xf) + (ss & 0xf)) & 0x10) == 0x10){
+    unset_flag(6);
+    if((((R1.high & 0xf) + (R2.high & 0xf)) & 0x10) == 0x10){
        set_flag(5);
     }else {
       unset_flag(5); 
     }
-    if((HL.full + ss) > 0xFF){
+    if((R1.high + R2.high) > 0xFF){
        set_flag(4);
     }else{
        unset_flag(4);
     }
     
-    HL.full += ss;
+   r1 = r1 + r2;
 }
  
 //Have the PC jump to the value specified in the next 2 bytes in memory
@@ -422,7 +537,7 @@ void CPU::op_16bit_load(Register &r){
       Register nn;
       nn.low = read(PC.full + 1);
       nn.high = read(PC.full + 2);
-      PC.full +=3;
+      PC.full += 3;
       PC.full = nn.full;
  }
  
@@ -433,54 +548,81 @@ void CPU::op_16bit_load(Register &r){
       PC.full += e;
  }
  
+void CPU::op_rotate_A(){
+    bitset<8> A(AF.high);
+    bitset<8> F(AF.low);
+    bool temp;
+    temp = F[4];
+    
+    if(left) F[4] = A[7];
+    if(right)F[4] = A[0];
+    
+    if(left){
+        A = A << 1 | A >> (8-1);
+    }
+  
+    if(right){
+       A = A >> 1 | A << (8-1);
+    }
+    
+    if(!carrying){
+      if(left) A[0] = temp;
+      if(right) A[7] = temp;
+    }
+    
+    AF.high = A.to_ulong();
+    AF.low = F.to_ulong();  
+}
 //rotate the bits in an 8-bit value
  void CPU::op_rotate(uint8_t &val){
      bitset<8> bit(val);
      bitset<8> flag(AF.low);
      bool temp;
+     temp = flag[4];
      
-     temp = bit[7];
+     if(left) flag[4] = bit[7];
+     if(right) flag[4] = bit[0];
+     
      if(left){
-         bit = bit << 1 | bit >> (8-1);
+        bit = bit << 1 | bit >> (8-1);
      }
+     
      
      if(right){
-        bit = bit >> 1 | bit << (8-1);
+      bit = bit >> 1 | bit << (8-1);
      }
      
-     if(!A){
-      if(val == 0) set_flag(7);
-      else unset_flag(7);
-     }
-     
-     bit[0] = flag[4];
-     flag[4] = temp;
+     if(!carrying){
+      if(left) bit[0] = temp;
+      if(right) bit[7] = temp;
+    }
      
      val = bit.to_ulong();
      AF.low = flag.to_ulong();
  }
  
  
+ 
 //shift the bits in an 8-bit value
  void CPU::op_shift(uint8_t &val){
     bitset<8> bit(val);
     bitset<8> flag(AF.low);
-    unset_flag(6);
-    unset_flag(5);
+    bool temp = bit[7];
     
     if(left){
+      flag[4] = bit[7];
       bit <<= 1;
-      flag[4] = bit.test(7);
     }
     
     if(right){
+    flag[4] = bit[0];
      bit >>= 1;
-     flag[4] = bit.test(0);
+     
     }
      
     if(reset7) bit.reset(7);
-   
     if(reset0) bit.reset(0);
+    if(keep7) bit[7] = temp;
      
     val = bit.to_ulong();
     AF.low = flag.to_ulong();
@@ -557,6 +699,9 @@ void CPU::op_16bit_load(Register &r){
  void CPU::op_pop(Register &qq){
     qq.low = read(SP.full);
     qq.high = read(SP.full + 1);
+    if(A){
+      qq.low &= 0xF0;
+    }
     write(SP.full, 0x0);
     write(SP.full + 1, 0x0);
     SP.full += 2;
@@ -567,7 +712,7 @@ void CPU::op_16bit_load(Register &r){
          if(check_flag(5) || (AF.high & 0x0f) > 0x09){
             AF.high += 0x6;        
          }
-         if(check_flag(4) || (AF.high > 0xFF)){
+         if(check_flag(4) || (AF.high > 0x99)){
             AF.high += 0x60;
          }
      } else {
@@ -585,11 +730,8 @@ void CPU::op_16bit_load(Register &r){
        unset_flag(7);
      }
      
-     if(AF.high > 0xFF){
-         set_flag(4);
-     }else {
-      unset_flag(7);
-     }
+     unset_flag(5);
+     
  }
  
  void CPU::op_cpl(){

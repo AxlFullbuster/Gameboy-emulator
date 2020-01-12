@@ -6,6 +6,7 @@
 #include<bitset>
 #include "imgui.h"
 #include "imgui_sdl.h"
+#include "imgui_memory_editor.h"
 #include "CPU.h"
 
 
@@ -39,6 +40,8 @@ class GPU : public CPU{
         bool obj0;
         bool obj1;
         bool sig;
+        
+        
         
         
         //an array that holds the pixel color data in the Gameboy

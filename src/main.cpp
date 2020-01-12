@@ -21,6 +21,7 @@ void emulate(){
        //handle interputs
        //other junk  
     }
+    display.draw_display();
     //at this point the gpu class will draw the screen
 }
 
@@ -45,11 +46,12 @@ int main(int argc, char* argv[]){
         
         if(!emu.loadGame(argv[1])) return 1;
         
-        SDL_Event e;
+        
         //run the emulator until the user closes the window
         while(!quit){
             ImGuiIO& io = ImGui::GetIO();
             int wheel = 0;
+            SDL_Event e;
             while( SDL_PollEvent( &e ) != 0 ) {
                 switch(e.type){
                     case SDL_QUIT:

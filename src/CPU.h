@@ -2,6 +2,7 @@
 #define CPU_H
 
 #include<stdint.h>
+#include<vector>
 
 
 class CPU{
@@ -10,6 +11,8 @@ class CPU{
         int cycles;
         
         uint8_t memory[0x10000];
+        uint8_t ROM[0x200000];
+        uint8_t RAM[0x8000];
         
         union Register{
             struct{
@@ -38,11 +41,24 @@ class CPU{
         bool IME;
         bool reset7;
         bool reset0;
+        bool keep7;
         bool A;
         
         
+        bool extRAM;
+        bool MBC;
+        bool rombanking;
+        int ramBank;
+        int romBank;
+        void checkBank();
+        void changeBank(uint16_t address, uint8_t data);
+        
+        
         void DMA(uint8_t data);
+        
         void load_bios();
+        void clearMemory();
+        
         
         //opcode functions
         void set_flag(int f);
@@ -52,6 +68,8 @@ class CPU{
         void set_pre_flags(uint8_t &val);
         void set_unpre_flags();
         void op_cpl();
+        void op_inc(uint8_t &val);
+        void op_dec(uint8_t &val);
         void op_8bit_load(uint8_t &r1, uint8_t r2);
         void op_16bit_load(Register &r);
         void op_8bit_add(uint8_t v);
@@ -60,8 +78,9 @@ class CPU{
         void op_8bit_or(uint8_t s);
         void op_8bit_xor(uint8_t s);
         void op_8bit_compare(uint8_t s);
-        void op_16bit_add_to_hl(uint16_t ss);
+        void op_16bit_add(uint16_t& r1, uint16_t r2);
         void op_rotate(uint8_t &val);
+        void op_rotate_A();
         void op_shift(uint8_t &val);
         void op_swap(uint8_t &val);
         void op_bit(int b, uint8_t &val);
@@ -93,6 +112,7 @@ class CPU{
     
        
         int get_cycles(int prev);
+        
         
         //methods for debugger
         uint16_t get_AF();

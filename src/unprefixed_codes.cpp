@@ -28,30 +28,13 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x04: //INC B
-            BC.high++;
-            unset_flag(6);
-            if(BC.high == 0) set_flag(7);
-            else unset_flag(7);
-            if((((BC.high & 0xf) + (BC.high & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else{
-                unset_flag(5);
-            }
+            op_inc(BC.high);
             cycles += 4;
             PC.full++;
         break;
     
         case 0x05: //DEC B
-            BC.high--;
-            set_flag(6);
-            if(BC.high == 0) set_flag(7);
-            else unset_flag(7);
-            if((((BC.high & 0xf) + (BC.high & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else{
-                unset_flag(5);
-            }
-            
+            op_dec(BC.high);
             cycles += 4;
             PC.full++;
         break;
@@ -64,11 +47,11 @@ void CPU::decode1(uint8_t opcode){
     
         case 0x07: //RLCA
             left = true;
-            A = true;
-            op_rotate(AF.high);
+            carrying = true;
+            op_rotate_A();
             set_unpre_flags();
             left = false;
-            A = false;
+            carrying = false;
             cycles += 4;
             PC.full++;
         break;
@@ -85,8 +68,7 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x09: //ADD HL BC
-            unset_flag(6);
-            op_16bit_add_to_hl(BC.full);
+            op_16bit_add(HL.full, BC.full);
             cycles += 8;
             PC.full++;
         break;
@@ -104,29 +86,13 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x0C: //INC C
-            BC.low++;
-            unset_flag(6);
-            if(BC.low == 0) set_flag(7);
-            else unset_flag(7);
-            if((((BC.low & 0xf) + (BC.low & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else{
-                unset_flag(5);
-            }
+            op_inc(BC.low);
             PC.full++;
             cycles += 4;
         break;
     
         case 0x0D: //DEC C
-            BC.low--;
-            set_flag(6);
-            if(BC.low == 0) set_flag(7);
-            else unset_flag(7);
-            if((((BC.low & 0xf) + (BC.low & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else{
-                unset_flag(5);
-            }
+            op_dec(BC.low);
             PC.full++;
             cycles += 4;
         break;
@@ -139,11 +105,11 @@ void CPU::decode1(uint8_t opcode){
     
         case 0x0F: //RRCA
             right = true;
-            A = true;
-            op_rotate(AF.high);
-            right = false;
-            A = false;
+            carrying = true;
+            op_rotate_A();
             set_unpre_flags();
+            right = false;
+            carrying = false;
             cycles += 4;
             PC.full++;
         break;
@@ -172,29 +138,13 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x14: //INC D
-            DE.high++;
-            unset_flag(6);
-            if(DE.high == 0) set_flag(7);
-            else set_flag(7);
-            if((((DE.high & 0xf) + (DE.high & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else{
-                unset_flag(5);
-            }
+            op_inc(DE.high);
             PC.full++;
             cycles += 4;
         break;
     
         case 0x15: //DEC D
-            DE.high--;
-            set_flag(6);
-            if(DE.high == 0) set_flag(7);
-            else unset_flag(7);
-            if((((DE.high & 0xf) + (DE.high & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            } else {
-                unset_flag(5);
-            }
+            op_dec(DE.high);
             PC.full++;
             cycles += 4;
         break;
@@ -207,10 +157,9 @@ void CPU::decode1(uint8_t opcode){
     
         case 0x17: //RLA
             left = true;
-            A = true;
-            op_rotate(AF.high);
+            op_rotate_A();
+            set_unpre_flags();
             left = false;
-            A = false;
             PC.full++;
             cycles += 4;
         break;
@@ -221,7 +170,7 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x19: //ADD HL DE
-            op_16bit_add_to_hl(DE.full);
+            op_16bit_add(HL.full,DE.full);
             PC.full++;
             cycles += 8;
         break;
@@ -239,29 +188,13 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x1C: //INC E
-            DE.low++;
-            unset_flag(6);
-            if(DE.low == 0) set_flag(7);
-            else set_flag(7);
-            if((((DE.low & 0xf) + (DE.low & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else {
-                unset_flag(5);
-            }
+            op_inc(DE.low);
             PC.full++;
             cycles += 4;
         break;
     
         case 0x1D: //DEC E
-            DE.low--;
-            set_flag(6);
-            if(DE.low == 0) set_flag(7);
-            else unset_flag(7);
-            if((((DE.low & 0xf) + (DE.low & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else {
-                unset_flag(5);
-            }
+            op_dec(DE.low);
             PC.full++;
             cycles += 4;
         break;
@@ -274,7 +207,7 @@ void CPU::decode1(uint8_t opcode){
     
         case 0x1F: //RRA
             right = true;
-            op_rotate(AF.high);
+            op_rotate_A();
             set_unpre_flags();
             right = false;
             PC.full++;
@@ -311,29 +244,13 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x24: //INC H
-            HL.high++;
-            unset_flag(6);
-            if(HL.high == 0) set_flag(7);
-            else unset_flag(7);
-            if((((HL.high & 0xf) + (HL.high & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else {
-                unset_flag(5);
-            }
+            op_inc(HL.high);
             PC.full++;
             cycles += 4;
         break;
     
         case 0x25: //DEC H
-            HL.high--;
-            set_flag(6);
-            if(HL.high == 0) set_flag(7);
-            else unset_flag(7);
-            if((((HL.high & 0xf) + (HL.high & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else {
-                unset_flag(5);
-            }
+            op_dec(HL.high);
             PC.full++;
             cycles += 4;
         break;
@@ -361,7 +278,7 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x29: //ADD HL HL
-            op_16bit_add_to_hl(HL.full);
+            op_16bit_add(HL.full,HL.full);
             PC.full++;
             cycles += 8;
         break;
@@ -380,29 +297,13 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x2C: //INC L
-            HL.low++;
-            unset_flag(6);
-            if(HL.low == 0) set_flag(7);
-            else unset_flag(7);
-            if((((HL.low & 0xf) + (HL.low & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else {
-                unset_flag(5);
-            }
+           op_inc(HL.low);
             PC.full++;
             cycles += 4;
         break;
     
         case 0x2D: //DEC L
-            HL.low--;
-            set_flag(6);
-            if(HL.low == 0) set_flag(7);
-            else unset_flag(7);
-            if((((HL.low & 0xf) + (HL.low & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else {
-                unset_flag(5);
-            }
+            op_dec(HL.low);
             PC.full++;
             cycles += 4;
         break;
@@ -450,15 +351,8 @@ void CPU::decode1(uint8_t opcode){
     
         case 0x34:{ //INC (HL)
             uint8_t val = read(HL.full);
-            val++;
-            unset_flag(6);
-            if(val == 0) set_flag(7);
-            else unset_flag(7);
-            if((((val & 0xf) + (val & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else {
-                unset_flag(5);
-            }
+            op_inc(val);
+            write(HL.full, val);
             PC.full++;
             cycles += 12;
         }
@@ -466,15 +360,8 @@ void CPU::decode1(uint8_t opcode){
     
         case 0x35:{ //DEC (HL)
             uint8_t val = read(HL.full);
-            val--;
-            set_flag(6);
-            if(val == 0) set_flag(7);
-            else unset_flag(7);
-            if((((val & 0xf) + (val & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else {
-                unset_flag(5);
-            }
+            op_dec(val);
+            write(HL.full, val);
             PC.full++;
             cycles += 12;
         }
@@ -505,7 +392,7 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x39: //ADD HL SP
-            op_16bit_add_to_hl(SP.full);
+            op_16bit_add(HL.full, SP.full);
             PC.full++;
             cycles += 8;
         break;
@@ -524,29 +411,13 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x3C: //INC A
-            AF.high++;
-            unset_flag(6);
-            if(AF.high == 0) set_flag(7);
-            else unset_flag(7);
-            if((((AF.high & 0xf) + (AF.high & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else {
-                unset_flag(5);
-            }
+            op_inc(AF.high);
             PC.full++;
             cycles += 4;
         break;
     
         case 0x3D: //DEC A
-            AF.high--;
-            set_flag(6);
-            if(AF.high == 0) set_flag(7);
-            else unset_flag(7);
-            if((((AF.high & 0xf) + (AF.high & 0xf)) & 0x10) == 0x10){
-                set_flag(5);
-            }else {
-                unset_flag(5);
-            }
+            op_dec(AF.high);
             PC.full++;
             cycles += 4;
         break;
@@ -1048,7 +919,7 @@ void CPU::decode1(uint8_t opcode){
             cycles += 4;
         break;
     
-        case 0x8E: // ADC A (HL)
+        case 0x8E:// ADC A (HL)
             carrying = true;
             op_8bit_add(read(HL.full));
             carrying = false;
@@ -1402,7 +1273,6 @@ void CPU::decode1(uint8_t opcode){
         case 0xC4: //CALL NZ u16
             if(!check_flag(7)){
                 cycles += 24;
-                PC.full += 3;
                 op_call();
             }else{
                 cycles += 12;
@@ -1656,13 +1526,16 @@ void CPU::decode1(uint8_t opcode){
             unset_flag(6);
             
             int8_t val = read(PC.full + 1);
-            
-            if(((SP.full & 0xf) + (val & 0xf)) & 0x10 == 0x10){
-                    set_flag(5);
+            if((((SP.high & 0xf) + (val & 0xf)) & 0x10) == 0x10){
+                set_flag(5);
+            }else{
+                unset_flag(5);
             }
             
-            if((SP.full + val) > 0xFF){
+            if((SP.low + val) > 0xFF){
                   set_flag(4);
+            }else{
+                unset_flag(4);
             }
             
             SP.full += val;
@@ -1718,10 +1591,13 @@ void CPU::decode1(uint8_t opcode){
             PC.full +=2;
         break;
     
-        case 0xF1: //POP AF
+        case 0xF1:{ //POP AF
+            A = true;
             op_pop(AF);
+            A = false;
             cycles += 12;
             PC.full++;
+        }
         break;
     
         case 0xF2: //LD A (FF00+C)
@@ -1764,17 +1640,20 @@ void CPU::decode1(uint8_t opcode){
             
             int8_t val = read(PC.full + 1);
             
-            if(((SP.full & 0xf) + (val & 0xf)) & 0x10 == 0x10){
+            if((((SP.high & 0xf) + (val & 0xf)) & 0x10) == 0x10){
                     set_flag(5);
+            }else{
+                unset_flag(5);
             }
             
-            if((SP.full + val) > 0xFF){
+            if((SP.low + val) > 0xFF){
                   set_flag(4);
+            }else{
+                unset_flag(4);
             }
             
-            SP.full += val;
-            HL.full = SP.full;
-            cycles += 16;
+            HL.full = SP.full + val;
+            cycles += 12;
             PC.full +=2;
         }
         break;
@@ -1785,11 +1664,13 @@ void CPU::decode1(uint8_t opcode){
             PC.full++;
         break;
     
-        case 0xFA: //LD A (u16)
-            AF.high = read(PC.full + 1);
-            AF.high = read(PC.full + 2);
+        case 0xFA:{ //LD A (u16)
+            Register value;
+            op_16bit_load(value);
+            AF.high = read(value.full);
             cycles += 16;
             PC.full += 3;
+        }
         break;
     
         case 0xFB: //EI

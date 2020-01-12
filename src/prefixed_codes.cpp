@@ -8,6 +8,7 @@ void CPU::decode2(uint8_t opcode){
             left = true;
             carrying = true;
             op_rotate(BC.high);
+            set_pre_flags(BC.high);
             left = false;
             carrying = false;
             
@@ -17,7 +18,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x01: //RLC C
             left = true;
+            carrying = true;
             op_rotate(BC.low);
+            set_pre_flags(BC.low);
+            carrying = false;
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -25,7 +29,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x02: //RLC D
             left = true;
+            carrying = true;
             op_rotate(DE.high);
+            set_pre_flags(DE.high);
+            carrying = false;
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -33,7 +40,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x03: //RLC E
             left = true;
+            carrying = true;
             op_rotate(DE.low);
+            set_pre_flags(DE.low);
+            carrying = false;
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -41,7 +51,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x04: //RLC H
             left = true;
+            carrying = true;
             op_rotate(HL.high);
+            set_pre_flags(HL.high);
+            carrying = false;
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -49,7 +62,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x05: //RLC L
             left = true;
+            carrying = true;
             op_rotate(HL.low);
+            set_pre_flags(HL.low);
+            carrying = false;
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -57,8 +73,11 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x06:{ //RLC (HL)
             left = true;
+            carrying = true;
             uint8_t val = read(HL.full);
             op_rotate(val);
+            set_pre_flags(val);
+            carrying = false;
             left = false;
             write(HL.full,val);
             cycles += 16;
@@ -68,7 +87,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x07: //RLC A
             left = true;
+            carrying = true;
             op_rotate(AF.high);
+            set_pre_flags(AF.high);
+            carrying = false;
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -76,7 +98,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x08: //RRC B
             right = true;
+            carrying = true;
             op_rotate(BC.high);
+            set_pre_flags(BC.high);
+            carrying = false;
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -84,7 +109,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x09: //RRC C
             right = true;
+            carrying = true;
             op_rotate(BC.low);
+            set_pre_flags(BC.low);
+            carrying = false;
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -92,7 +120,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x0A: //RRC D
             right = true;
+            carrying = true;
             op_rotate(DE.high);
+            set_pre_flags(DE.high);
+            carrying = false;
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -100,7 +131,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x0B: //RRC E
             right = true;
+            carrying = true;
             op_rotate(DE.low);
+            set_pre_flags(DE.low);
+            carrying = false;
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -108,7 +142,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x0C: //RRC H
             right = true;
+            carrying = true;
             op_rotate(HL.high);
+            set_pre_flags(HL.high);
+            carrying = false;
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -116,7 +153,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x0D: //RRC L
             right = true;
+            carrying = true;
             op_rotate(HL.low);
+            set_pre_flags(HL.low);
+            carrying = false;
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -124,8 +164,11 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x0E:{ //RRC (HL)
             right = true;
+            carrying = true;
             uint8_t val = read(HL.full);
             op_rotate(val);
+            set_pre_flags(val);
+            carrying = false;
             right = false;
             write(HL.full,val);
             cycles += 16;
@@ -135,7 +178,10 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x0F: //RRC A
             right = true;
+            carrying = true;
             op_rotate(AF.high);
+            set_pre_flags(AF.high);
+            carrying = false;
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -144,6 +190,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x10: //RL B
             left = true;
             op_rotate(BC.high);
+            set_pre_flags(BC.high);
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -152,6 +199,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x11: //RL C
             left = true;
             op_rotate(BC.low);
+            set_pre_flags(BC.low);
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -160,6 +208,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x12: //RL D
             left = true;
             op_rotate(DE.high);
+            set_pre_flags(DE.high);
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -168,6 +217,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x13: //RL E
             left = true;
             op_rotate(DE.low);
+            set_pre_flags(DE.low);
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -176,6 +226,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x14: //RL H
             left = true;
             op_rotate(HL.high);
+            set_pre_flags(HL.high);
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -184,6 +235,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x15: //RL L
             left = true;
             op_rotate(HL.low);
+            set_pre_flags(HL.low);
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -193,6 +245,7 @@ void CPU::decode2(uint8_t opcode){
             left = true;
             uint8_t val = read(HL.full);
             op_rotate(val);
+            set_pre_flags(val);
             left = false;
             write(HL.full,val);
             cycles += 16;
@@ -202,9 +255,8 @@ void CPU::decode2(uint8_t opcode){
     
         case 0x17: //RL A
             left = true;
-            carrying = true;
             op_rotate(AF.high);
-            carrying = false;
+            set_pre_flags(AF.high);
             left = false;
             cycles += 8;
             PC.full += 2;
@@ -213,6 +265,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x18: //RR B
             right = true;
             op_rotate(BC.high);
+            set_pre_flags(BC.high);
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -221,6 +274,8 @@ void CPU::decode2(uint8_t opcode){
         case 0x19: //RR C
             right = true;
             op_rotate(BC.low);
+            set_pre_flags(BC.low);
+            right = false;
             cycles += 8;
            PC.full += 2;
         break;
@@ -228,6 +283,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x1A: //RR D
             right = true;
             op_rotate(DE.high);
+            set_pre_flags(DE.high);
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -236,6 +292,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x1B: //RR E
             right = true;
             op_rotate(DE.low);
+            set_pre_flags(DE.low);
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -244,6 +301,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x1C: //RR H
             right = true;
             op_rotate(HL.high);
+            set_pre_flags(HL.high);
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -252,6 +310,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x1D: //RR L
             right = true;
             op_rotate(HL.low);
+            set_pre_flags(HL.low);
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -261,6 +320,7 @@ void CPU::decode2(uint8_t opcode){
             right = true;
             uint8_t val = read(HL.full);
             op_rotate(val);
+            set_pre_flags(val);
             right = false;
             write(HL.full,val);
             cycles += 16;
@@ -271,6 +331,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x1F: //RR A
             right = true;
             op_rotate(AF.high);
+            set_pre_flags(AF.high);
             right = false;
             cycles += 8;
             PC.full += 2;
@@ -360,58 +421,72 @@ void CPU::decode2(uint8_t opcode){
         break;
     
         case 0x28: //SRA B
-            left = true;
+            right = true;
+            keep7 = true;
             op_shift(BC.high);
-            left = false;
+            keep7 = false;
+            right = false;
             cycles += 8;
            PC.full += 2;
         break;
     
         case 0x29: //SRA C
-            left = true;
+            right = true;
+            keep7 = true;
             op_shift(BC.low);
-            left = false;
+            keep7 = false;
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
     
         case 0x2A: //SRA D
-            left = true;
+            right = true;
+            keep7 = true;
             op_shift(DE.high);
-            left = false;
+            keep7 = false;
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
     
         case 0x2B: //SRA E
-            left = true;
+            right = true;
+            keep7 = true;
             op_shift(DE.low);
-            left = false;
+            keep7 = false;
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;
     
         case 0x2C: //SRA H
-            left = true;
+            right = true;
+            keep7 = true;
             op_shift(HL.high);
-            left = false;
+            keep7 = false;
+            right = false;
             cycles += 8;
            PC.full += 2;
         break;
     
         case 0x2D: //SRA L
-            left = true;
+            right = true;
+            keep7 = true;
             op_shift(HL.low);
-            left = false;
+            keep7 = false;
+            right = false;
             cycles += 8;
           PC.full += 2;
         break;
     
         case 0x2E:{ //SRA (HL)
-            left = true;
+            right = true;
+            keep7 = true;
             uint8_t val = read(HL.full);
             op_shift(val);
-            left = false;
+            keep7 = false;
+            right = false;
             write(HL.full,val);
             cycles += 8;
             PC.full += 2;
@@ -419,9 +494,11 @@ void CPU::decode2(uint8_t opcode){
         break;
     
         case 0x2F: //SRA A
-            left = true;
+            right = true;
+            keep7 = true;
             op_shift(AF.high);
-            left = false;
+            keep7 = false;
+            right = false;
             cycles += 8;
             PC.full += 2;
         break;

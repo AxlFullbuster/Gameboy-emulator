@@ -62,6 +62,7 @@ void GPU::check_mode(){
         gpu_cycles = 456;
         emu.write(0xFF44, 0);
         emu.write(0xFF41, lcd_status.to_ulong());
+        return;
     }
 
     /*if we're in v-blank enter mode 1 and call an interrupt.
@@ -121,7 +122,7 @@ void GPU::check_scanline(){
                 draw_scanline();
             }else if(yCoordinate == 144){
                 //call a v-blank interrupt
-                draw_display();
+                //draw_display();
             }else if (yCoordinate >= 153){
                 emu.write(0xFF44, 0);
         }
@@ -456,16 +457,29 @@ void GPU::draw_sprites(){
 //draw the display onto the screen
 void GPU::draw_display(){
     //draw the color data stored in gfx onto the screen
+    SDL_Rect pixel;
+    SDL_SetRenderTarget(renderer, texture);
     for(int y = 0; y < 144; y++){
         for(int x = 0; x < 160; x++) {
             red = gfx[x][y][0];
             green = gfx[x][y][1];
             blue = gfx[x][y][2];
+            
+            pixel.x = x*2;
+            pixel.y = y*2;
+            pixel.w = 10;
+            pixel.h = 10;
+            
+            
             SDL_SetRenderDrawColor(renderer, red, green, blue, 255);
-            SDL_RenderDrawPoint(renderer, x, y);
+            SDL_RenderFillRect(renderer,&pixel);
+            
+            
+            
         }
     }
     //present the drawn canvas
+    SDL_SetRenderTarget(renderer, nullptr);
     SDL_RenderPresent(renderer);
 }
 
@@ -484,6 +498,9 @@ void GPU::draw_debugger(){
     //get the CPU register values
     bitset<8> flags = emu.get_F();
     uint8_t *mem = emu.get_mem();
+    
+    MemoryEditor mem_edit;
+    mem_edit.DrawWindow("Memory Map", mem, 0x10000);
     
     //create a new window called "Registers
     ImGui::Begin("Registers");
@@ -521,29 +538,16 @@ void GPU::draw_debugger(){
     
     
     ImGui::End();
-    
-    ImGui::Begin("Memory");
-    ImGui::Columns(2);
-    ImGui::Text("Memory Location");
-    for(int i = 0; i < 0x10000; i++){
-        //print the memory location
-        ImGui::Text("0x%X", i);
-    }
-    ImGui::NextColumn();
-    
-    ImGui::Text("Memory Value");
-    ImGui::Separator();
-    for(int i = 0; i < 0x10000; i++){
-        //print the value stored in a specific memory location
-        ImGui::Text("0x%X", *(mem+i));
-    }
-    
-    ImGui::End();
-    
+
     //print out the executed operation code
-    ImGui::Begin("Executed Codes");
-    ImGui::Text("Code:0x%X", emu.get_OP());
+    ImGui::Begin("Opcode");
+    ImGui::Text("Executed Code:0x%X", emu.get_OP());
     ImGui::End();
+    
+    ImGui::Begin("Gameboy");
+    ImGui::Image(texture, ImVec2(160*2, 144*2));
+	ImGui::End();
+    
     
     ImGui::Render();
     ImGuiSDL::Render(ImGui::GetDrawData());
@@ -569,7 +573,7 @@ bool GPU::init(){
 	}
     
     
-    window = SDL_CreateWindow("Gameboy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("Gameboy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
     if (window == NULL){
         printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
         success = false;
@@ -583,7 +587,7 @@ bool GPU::init(){
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
     }
     
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 160, 144);
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET, 160*2, 144*2);
     ImGui::CreateContext();
     ImGuiSDL::Initialize(renderer, 640,320);
     
@@ -598,8 +602,10 @@ void GPU::close(){
     
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    SDL_DestroyTexture(texture);
     renderer = NULL;
     window = NULL;
+    texture = NULL;
     
 	ImGui::DestroyContext();
     SDL_Quit();
