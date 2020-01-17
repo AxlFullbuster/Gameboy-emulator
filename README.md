@@ -8,7 +8,7 @@ The goal of this project is to create an emulator that can run games somewhat ac
 There are currently no plans to emulate sound and memory banking past the first type.    
 
 # Current Progress  
-MBC1 support has been implemented and some tweaks were made to the CPU instructions. Currently working on implementing timers.  
+Timers and Interrupts have been implemented. Currently testing the emulator with Blargg's test roms.  
 
 # References/Resources    
 [Gameboy Development Manual Version 1.1](https://archive.org/details/GameBoyProgManVer1.1)  

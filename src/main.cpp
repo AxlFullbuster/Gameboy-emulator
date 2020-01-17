@@ -16,13 +16,12 @@ void emulate(){
     while(grand_cycles < 70244){
         emu.emulateCycle();
         grand_cycles += emu.timing;
-        display.init_registers();
+        emu.update_timers();
         display.check_scanline();
-       //handle interputs
+        emu.check_interrupt();
        //other junk  
     }
     display.draw_display();
-    //at this point the gpu class will draw the screen
 }
 
 int main(int argc, char* argv[]){

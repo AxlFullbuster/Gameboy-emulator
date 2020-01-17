@@ -77,7 +77,7 @@ void CPU::clearMemory(){
 
 //does the fetch, decode, and execute cycle
 void CPU::emulateCycle(){
-if( PC.full == 0xDEF8 && opcode == 0x47 && AF.full == 0x00F0){
+if( PC.full == 0xC400){
   //printf("0x%X ", opcode);
   return;
 }
@@ -129,6 +129,9 @@ void CPU::write(uint16_t address, uint8_t data){
     }else if(address >= 0xFEA0 && address <= 0xFEFF){
        //don't write here the gameboy will get mad
        return;
+    }else if(address == 0xFF04){
+      //writing to the divider register resets it to 0
+      memory[address] = 0x00;
     }else if(address == 0xFF44){
        //all writes to the scanline will reset the value
        memory[address] = 0;
@@ -137,6 +140,126 @@ void CPU::write(uint16_t address, uint8_t data){
     }else{
        memory[address] = data;
     }
+}
+
+void CPU::update_timers(){
+  bitset<8> TAC(read(0xFF07));
+  int input_clock;
+  if(!TAC.test(2)){
+    return;
+  }else{
+    if(!TAC.test(0) && !TAC.test(1)) input_clock = 0;
+    else if(TAC.test(0) && !TAC.test(1)) input_clock = 1;
+    else if(!TAC.test(0) && TAC.test(1)) input_clock = 2;
+    else input_clock = 3;
+    
+    switch(input_clock){
+        case 0:
+          if((cycles % 1024) == 0)
+            memory[0xFF05]++;
+        break;
+      
+        case 1:
+          if((cycles % 16) == 0)
+            memory[0xFF05]++;
+        break;
+      
+        case 2:
+          if((cycles % 64) == 0)
+            memory[0xFF05]++;
+        break;
+      
+        case 3:
+          if((cycles % 256) == 0)
+            memory[0xFF05]++;
+        break;
+    }
+    
+    if((cycles % 256) == 0) memory[0xFF04]++;
+    if(read(0xFF04) > 0xFF) write(0xFF04, 0x00);
+    
+    if(read(0xFF05) == 0xFF){
+      memory[0xFF05] = read(0xFF06);
+      //call an interrupt
+      request_interrupt(2);
+    }
+  }
+}
+
+void CPU::request_interrupt(int req){
+  bitset<8> IF (read(0xFF0F));
+  IF.set(req);
+  write(0xFF0F, IF.to_ulong());
+}
+
+void CPU::check_interrupt(){
+  bitset<8> IF (read(0xFF0F));
+  for(int i = 0; i < 8; i++){
+    if(IF.test(i)){
+      execute_interrupt(i);
+      return;
+    }
+  }
+}
+
+void CPU::execute_interrupt(int req){
+  bitset<8> IE (read(0xFFFF));
+  bitset<8> IF (read(0xFF0F));
+  if(IME){
+    switch(req){
+      case 0:
+        if(IF.test(0)){
+          IF.reset(0);
+          IE.set(0);
+          IME = false;
+          op_push(PC);
+          PC.full = 0x0040;
+        }
+      break;
+    
+      case 1:
+        if(IF.test(1)){
+          IF.reset(1);
+          IE.set(1);
+          IME = false;
+          op_push(PC);
+          PC.full = 0x0048;
+        }
+      break;
+    
+      case 2:
+        if(IF.test(2)){
+          IF.reset(2);
+          IE.set(2);
+          IME = false;
+          op_push(PC);
+          PC.full = 0x0050;
+        }
+      break;
+    
+      case 3:
+        if(IF.test(3)){
+          IF.reset(3);
+          IE.set(3);
+          IME = false;
+          op_push(PC);
+          PC.full = 0x0058;
+        }
+      break;
+    
+      case 4:
+        if(IF.test(4)){
+          IF.reset(4);
+          IE.set(4);
+          IME = false;
+          op_push(PC);
+          PC.full = 0x0060;
+        }
+      break;
+    }
+  }else{
+    return;
+  }
 }
 
 void CPU::changeBank(uint16_t address, uint8_t data){

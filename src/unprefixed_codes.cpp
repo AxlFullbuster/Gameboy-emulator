@@ -1420,11 +1420,9 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0xD9: //RETI
-            /* if interupt return
-                cycles += 20;
-                op_return();
-            */
-            cycles += 8;
+            IME = true; 
+            op_return();
+            cycles += 16;
             PC.full++;
         break;
     

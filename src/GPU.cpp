@@ -23,6 +23,7 @@ void GPU::stat_interrupt(){
     if(yCoordinate == lyCompare){
         lcd_status.set(2);
         //do a stat interrupt
+        emu.request_interrupt(1);
     }else{
         lcd_status.reset(2);
     }
@@ -74,6 +75,7 @@ void GPU::check_mode(){
         lcd_status.set(0);
         lcd_status.reset(1);
         //call a v-blank interrupt
+        emu.request_interrupt(0);
     }else{
         if(gpu_cycles >= 376){
             mode = 2;
@@ -90,7 +92,7 @@ void GPU::check_mode(){
         }
     }
     //call an interrupt if you changed modes
-    //stat_interrupt();
+    stat_interrupt();
     emu.write(0xFF41, lcd_status.to_ulong());
 }
 
@@ -98,6 +100,7 @@ void GPU::check_mode(){
  *cycle value.
  */
 void GPU::check_scanline(){
+    init_registers();
     check_mode();
     
     /*if the lcd display is enabled subtract the
@@ -122,7 +125,7 @@ void GPU::check_scanline(){
                 draw_scanline();
             }else if(yCoordinate == 144){
                 //call a v-blank interrupt
-                //draw_display();
+                emu.request_interrupt(0);
             }else if (yCoordinate >= 153){
                 emu.write(0xFF44, 0);
         }

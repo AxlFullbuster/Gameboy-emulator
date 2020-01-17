@@ -52,12 +52,14 @@ class CPU{
         int romBank;
         void checkBank();
         void changeBank(uint16_t address, uint8_t data);
+        void execute_interrupt(int req);
         
         
         void DMA(uint8_t data);
         
         void load_bios();
         void clearMemory();
+        
         
         
         //opcode functions
@@ -109,6 +111,9 @@ class CPU{
         
         void emulateCycle();
         void increment_scanline();
+        void update_timers();
+        void request_interrupt(int req);
+        void check_interrupt();
     
        
         int get_cycles(int prev);
