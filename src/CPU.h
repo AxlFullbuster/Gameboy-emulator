@@ -37,7 +37,6 @@ class CPU{
         bool condition;
         bool left;
         bool right;
-        bool halt;
         bool IME;
         bool reset7;
         bool reset0;
@@ -50,12 +49,15 @@ class CPU{
         bool rombanking;
         int ramBank;
         int romBank;
+        int timer_tresh;
         void checkBank();
         void changeBank(uint16_t address, uint8_t data);
         void execute_interrupt(int req);
         
         
         void DMA(uint8_t data);
+        void div_inc();
+        void check_freq();
         
         void load_bios();
         void clearMemory();
@@ -108,6 +110,7 @@ class CPU{
         
         bool loadGame(const char* filename);
         bool bios;
+        bool halt;
         
         void emulateCycle();
         void increment_scanline();
@@ -136,6 +139,7 @@ class CPU{
         uint8_t get_L();
         uint8_t get_F();
         uint8_t get_OP();
+        bool get_ime();
         
         uint8_t read(uint16_t address);
         void write(uint16_t address, uint8_t data);

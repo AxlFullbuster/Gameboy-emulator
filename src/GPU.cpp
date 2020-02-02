@@ -92,6 +92,9 @@ void GPU::check_mode(){
         }
     }
     //call an interrupt if you changed modes
+    if(currentmode != mode){
+        emu.request_interrupt(0);
+    }
     stat_interrupt();
     emu.write(0xFF41, lcd_status.to_ulong());
 }
@@ -476,9 +479,7 @@ void GPU::draw_display(){
             
             SDL_SetRenderDrawColor(renderer, red, green, blue, 255);
             SDL_RenderFillRect(renderer,&pixel);
-            
-            
-            
+              
         }
     }
     //present the drawn canvas
@@ -551,6 +552,10 @@ void GPU::draw_debugger(){
     ImGui::Image(texture, ImVec2(160*2, 144*2));
 	ImGui::End();
     
+    ImGui::Begin("Misellanious Registers");
+    ImGui::Text("IME:%d", emu.get_ime());
+    ImGui::Text("Halt:%d", emu.halt);
+    ImGui::End();
     
     ImGui::Render();
     ImGuiSDL::Render(ImGui::GetDrawData());

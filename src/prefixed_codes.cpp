@@ -551,7 +551,7 @@ void CPU::decode2(uint8_t opcode){
         case 0x37: //SWAP A
             op_swap(AF.high);
             cycles += 8;
-            PC.full++;
+            PC.full += 2;
         break;
     
         case 0x38: //SRL B

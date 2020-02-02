@@ -116,6 +116,7 @@ void CPU::decode1(uint8_t opcode){
     
         case 0x10: //STOP
             halt = true;
+            cycles += 4;
             PC.full += 2;
         break;
     
@@ -765,7 +766,9 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x76: //HALT
-            halt = true;
+           halt = true;
+           cycles += 4;
+           PC.full++;
         break;
     
         case 0x77: //LD (HL) A
@@ -1523,20 +1526,22 @@ void CPU::decode1(uint8_t opcode){
             unset_flag(7);
             unset_flag(6);
             
-            int8_t val = read(PC.full + 1);
-            if((((SP.high & 0xf) + (val & 0xf)) & 0x10) == 0x10){
+            uint8_t uval = read(PC.full + 1);
+            int8_t sval = uval;
+            
+            if((((SP.low & 0xf) + (uval & 0xf)) & 0x10) == 0x10){
                 set_flag(5);
             }else{
                 unset_flag(5);
             }
             
-            if((SP.low + val) > 0xFF){
+            if((SP.low + uval ) > 0xFF){
                   set_flag(4);
             }else{
                 unset_flag(4);
             }
             
-            SP.full += val;
+            SP.full += sval;
             cycles += 16;
             PC.full += 2;
         }
@@ -1636,21 +1641,23 @@ void CPU::decode1(uint8_t opcode){
             unset_flag(7);
             unset_flag(6);
             
-            int8_t val = read(PC.full + 1);
+            uint8_t uval = read(PC.full + 1);
+            int8_t sval = uval;
             
-            if((((SP.high & 0xf) + (val & 0xf)) & 0x10) == 0x10){
+            
+            if((((SP.low & 0xf) + (uval & 0xf)) & 0x10) == 0x10){
                     set_flag(5);
             }else{
                 unset_flag(5);
             }
             
-            if((SP.low + val) > 0xFF){
+            if((SP.low + uval) > 0xFF){
                   set_flag(4);
             }else{
                 unset_flag(4);
             }
             
-            HL.full = SP.full + val;
+            HL.full = SP.full + sval;
             cycles += 12;
             PC.full +=2;
         }

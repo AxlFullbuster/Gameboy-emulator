@@ -77,21 +77,20 @@ void CPU::clearMemory(){
 
 //does the fetch, decode, and execute cycle
 void CPU::emulateCycle(){
-if( PC.full == 0xC400){
-  //printf("0x%X ", opcode);
-  return;
-}
-
-
+  if(halt){
+    decode1(0x00);
+  }else{
    int current_cycle = cycles;
      opcode = read(PC.full);
         if(opcode != 0xCB){
            decode1(opcode);
         }else {
             opcode = read(PC.full +1);
+            cycles += 4;
             decode2(opcode);
         }
       timing = get_cycles(current_cycle);
+  }
 }
 
 //read from memory space
@@ -144,57 +143,74 @@ void CPU::write(uint16_t address, uint8_t data){
 
 void CPU::update_timers(){
   bitset<8> TAC(read(0xFF07));
-  int input_clock;
-  if(!TAC.test(2)){
-    return;
-  }else{
-    if(!TAC.test(0) && !TAC.test(1)) input_clock = 0;
-    else if(TAC.test(0) && !TAC.test(1)) input_clock = 1;
-    else if(!TAC.test(0) && TAC.test(1)) input_clock = 2;
-    else input_clock = 3;
-    
-    switch(input_clock){
-        case 0:
-          if((cycles % 1024) == 0)
-            memory[0xFF05]++;
-        break;
-      
-        case 1:
-          if((cycles % 16) == 0)
-            memory[0xFF05]++;
-        break;
-      
-        case 2:
-          if((cycles % 64) == 0)
-            memory[0xFF05]++;
-        break;
-      
-        case 3:
-          if((cycles % 256) == 0)
-            memory[0xFF05]++;
-        break;
-    }
-    
-    if((cycles % 256) == 0) memory[0xFF04]++;
-    if(read(0xFF04) > 0xFF) write(0xFF04, 0x00);
-    
-    if(read(0xFF05) == 0xFF){
-      memory[0xFF05] = read(0xFF06);
+  div_inc();
+  if(!TAC.test(2)) return;
+  
+  timer_tresh -= timing;
+  if(timer_tresh <= 0){
+    check_freq();
+    write(0xFF05, read(0xFF05) + 1);
+
+    if(read(0xFF05) >= 255){
+      write(0xFF05, read(0xFF06));
       //call an interrupt
       request_interrupt(2);
     }
   }
 }
 
+void CPU::div_inc(){
+  int counter = 0;
+  counter += timing;
+  
+  if(counter >= 256){
+      memory[0xFF04]++;
+      counter = 0;
+  }
+  
+  if(read(0xFF04) >= 255){
+    write(0xFF04, 0x00);
+  }
+}
+
+void CPU::check_freq(){
+  int input_clock;
+  bitset<8> TAC(read(0xFF07));
+  
+  if(!TAC.test(0) && !TAC.test(1)) input_clock = 0;
+  else if(TAC.test(0) && !TAC.test(1)) input_clock = 1;
+  else if(!TAC.test(0) && TAC.test(1)) input_clock = 2;
+  else input_clock = 3;
+  
+  switch(input_clock){
+        case 0:
+          timer_tresh = 1024;
+        break;
+      
+        case 1:
+          timer_tresh = 16;
+        break;
+      
+        case 2:
+          timer_tresh = 64;
+        break;
+      
+        case 3:
+          timer_tresh = 256;
+        break;
+    }
+}
+
 void CPU::request_interrupt(int req){
   bitset<8> IF (read(0xFF0F));
   IF.set(req);
   write(0xFF0F, IF.to_ulong());
+  halt = false;
 }
 
 void CPU::check_interrupt(){
   bitset<8> IF (read(0xFF0F));
-  for(int i = 0; i < 8; i++){
+  for(int i = 0; i < 5; i++){
     if(IF.test(i)){
       execute_interrupt(i);
       return;
@@ -205,61 +221,50 @@ void CPU::check_interrupt(){
 void CPU::execute_interrupt(int req){
   bitset<8> IE (read(0xFFFF));
   bitset<8> IF (read(0xFF0F));
-  if(IME){
+  if(IME && IF.test(req) && IE.test(req)){
     switch(req){
       case 0:
-        if(IF.test(0)){
           IF.reset(0);
-          IE.set(0);
+          write(0xFF0F, IF.to_ulong());
           IME = false;
           op_push(PC);
           PC.full = 0x0040;
-        }
       break;
     
       case 1:
-        if(IF.test(1)){
           IF.reset(1);
-          IE.set(1);
+          write(0xFF0F, IF.to_ulong());
           IME = false;
           op_push(PC);
           PC.full = 0x0048;
-        }
       break;
     
       case 2:
-        if(IF.test(2)){
           IF.reset(2);
-          IE.set(2);
+          write(0xFF0F, IF.to_ulong());
           IME = false;
           op_push(PC);
           PC.full = 0x0050;
-        }
       break;
     
       case 3:
-        if(IF.test(3)){
           IF.reset(3);
-          IE.set(3);
+          write(0xFF0F, IF.to_ulong());
           IME = false;
           op_push(PC);
           PC.full = 0x0058;
-        }
       break;
     
       case 4:
-        if(IF.test(4)){
           IF.reset(4);
-          IE.set(4);
+          write(0xFF0F, IF.to_ulong());
           IME = false;
           op_push(PC);
           PC.full = 0x0060;
-        }
       break;
     }
-  }else{
-    return;
   }
+  halt = false;
 }
 
 void CPU::changeBank(uint16_t address, uint8_t data){
@@ -635,24 +640,20 @@ void CPU::op_dec(uint8_t &val){
  
 //adds a 16-bit value to the HL register
  void CPU::op_16bit_add(uint16_t& r1, uint16_t r2){
-    Register R1;
-    Register R2;
-    R1.full = r1;
-    R2.full = r2;
-    
     unset_flag(6);
-    if((((R1.high & 0xf) + (R2.high & 0xf)) & 0x10) == 0x10){
+    if((((r1 & 0xfff) + (r2 & 0xfff)) & 0x1000) == 0x1000){
        set_flag(5);
     }else {
       unset_flag(5); 
     }
-    if((R1.high + R2.high) > 0xFF){
+    
+    if((r1 + r2) > 0xFFFF){
        set_flag(4);
     }else{
        unset_flag(4);
     }
     
-   r1 = r1 + r2;
+   r1 += r2;
 }
  
 //Have the PC jump to the value specified in the next 2 bytes in memory
@@ -797,7 +798,7 @@ void CPU::op_rotate_A(){
  void CPU::op_call(){
      Register nn;
      op_16bit_load(nn);
-     PC.full +=3;
+     PC.full += 3;
      op_push(PC);
      PC = nn;
  }
@@ -822,36 +823,42 @@ void CPU::op_rotate_A(){
  void CPU::op_pop(Register &qq){
     qq.low = read(SP.full);
     qq.high = read(SP.full + 1);
+    
     if(A){
       qq.low &= 0xF0;
     }
-    write(SP.full, 0x0);
-    write(SP.full + 1, 0x0);
+    
     SP.full += 2;
  }
  
  void CPU::op_DAA(){
      if(!check_flag(6)){
+         if(check_flag(4) || (AF.high > 0x99)){
+            AF.high += 0x60;
+            set_flag(4);
+         }
+      
          if(check_flag(5) || (AF.high & 0x0f) > 0x09){
             AF.high += 0x6;        
          }
-         if(check_flag(4) || (AF.high > 0x99)){
-            AF.high += 0x60;
-         }
+         
      } else {
-        if(check_flag(5)){
-           AF.high -= 0x6;
-        }
         if(check_flag(4)){
            AF.high -= 0x60;
+           set_flag(4);
+        }
+      
+        if(check_flag(5)){
+           AF.high -= 0x6;
         }
      }
     
      if(AF.high == 0){
-         set_flag(7);
-     }else {
+       set_flag(7);
+     }else{
        unset_flag(7);
      }
+     
      
      unset_flag(5);
      
@@ -931,6 +938,10 @@ uint8_t CPU::get_OP(){
  
 int CPU::get_cycles(int prev){
     return cycles - prev;
+}
+
+bool CPU::get_ime(){
+  return IME;
 }
 
  
