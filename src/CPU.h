@@ -42,6 +42,7 @@ class CPU{
         bool reset0;
         bool keep7;
         bool A;
+        bool halt;
         
         
         bool extRAM;
@@ -110,7 +111,6 @@ class CPU{
         
         bool loadGame(const char* filename);
         bool bios;
-        bool halt;
         
         void emulateCycle();
         void increment_scanline();

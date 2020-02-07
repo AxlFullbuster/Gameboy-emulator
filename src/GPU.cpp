@@ -74,8 +74,6 @@ void GPU::check_mode(){
         mode = 1;
         lcd_status.set(0);
         lcd_status.reset(1);
-        //call a v-blank interrupt
-        emu.request_interrupt(0);
     }else{
         if(gpu_cycles >= 376){
             mode = 2;
@@ -93,7 +91,7 @@ void GPU::check_mode(){
     }
     //call an interrupt if you changed modes
     if(currentmode != mode){
-        emu.request_interrupt(0);
+        emu.request_interrupt(1);
     }
     stat_interrupt();
     emu.write(0xFF41, lcd_status.to_ulong());
@@ -552,10 +550,6 @@ void GPU::draw_debugger(){
     ImGui::Image(texture, ImVec2(160*2, 144*2));
 	ImGui::End();
     
-    ImGui::Begin("Misellanious Registers");
-    ImGui::Text("IME:%d", emu.get_ime());
-    ImGui::Text("Halt:%d", emu.halt);
-    ImGui::End();
     
     ImGui::Render();
     ImGuiSDL::Render(ImGui::GetDrawData());

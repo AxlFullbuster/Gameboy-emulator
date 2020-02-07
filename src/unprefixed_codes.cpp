@@ -115,7 +115,7 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x10: //STOP
-            halt = true;
+            //halt = true;
             cycles += 4;
             PC.full += 2;
         break;
@@ -756,7 +756,6 @@ void CPU::decode1(uint8_t opcode){
             write(HL.full, HL.high);
             PC.full++;
             cycles += 8;
-            
         break;
     
         case 0x75: // LD (HL) L
@@ -1426,7 +1425,6 @@ void CPU::decode1(uint8_t opcode){
             IME = true; 
             op_return();
             cycles += 16;
-            PC.full++;
         break;
     
         case 0xDA: //JP C u16
@@ -1702,7 +1700,7 @@ void CPU::decode1(uint8_t opcode){
     
         case 0xFF: //RST 38h
             cycles += 16;
-            op_restart(0x38);
+            op_restart(0x30);
         break;
     
         default:

@@ -25,7 +25,6 @@ CPU::~CPU(){
 
 //initialize the emulator values to the ones given in the boot rom
 void CPU::initialize(){
- 
     PC.full = 0x0100;
     SP.full = 0xFFFE;
     AF.full = 0x01B0;
@@ -35,6 +34,7 @@ void CPU::initialize(){
     
     cycles = 0;
 
+    memory[0xFF00] = 0x0F;
     memory[0xFF05] = 0x00;
     memory[0xFF06] = 0x00;
     memory[0xFF07] = 0x00;
@@ -78,14 +78,14 @@ void CPU::clearMemory(){
 //does the fetch, decode, and execute cycle
 void CPU::emulateCycle(){
   if(halt){
-    decode1(0x00);
+    cycles += 4;
   }else{
    int current_cycle = cycles;
      opcode = read(PC.full);
         if(opcode != 0xCB){
            decode1(opcode);
         }else {
-            opcode = read(PC.full +1);
+            opcode = read(PC.full + 1);
             cycles += 4;
             decode2(opcode);
         }
@@ -128,6 +128,9 @@ void CPU::write(uint16_t address, uint8_t data){
     }else if(address >= 0xFEA0 && address <= 0xFEFF){
        //don't write here the gameboy will get mad
        return;
+    }else if(address == 0xFF00){
+      //this address holds joypad information so don't write to it
+      return;
     }else if(address == 0xFF04){
       //writing to the divider register resets it to 0
       memory[address] = 0x00;
@@ -205,7 +208,6 @@ void CPU::request_interrupt(int req){
   bitset<8> IF (read(0xFF0F));
   IF.set(req);
   write(0xFF0F, IF.to_ulong());
-  halt = false;
 }
 
 void CPU::check_interrupt(){
@@ -221,50 +223,52 @@ void CPU::check_interrupt(){
 void CPU::execute_interrupt(int req){
   bitset<8> IE (read(0xFFFF));
   bitset<8> IF (read(0xFF0F));
-  if(IME && IF.test(req) && IE.test(req)){
-    switch(req){
-      case 0:
-          IF.reset(0);
-          write(0xFF0F, IF.to_ulong());
-          IME = false;
-          op_push(PC);
-          PC.full = 0x0040;
-      break;
-    
-      case 1:
-          IF.reset(1);
-          write(0xFF0F, IF.to_ulong());
-          IME = false;
-          op_push(PC);
-          PC.full = 0x0048;
-      break;
-    
-      case 2:
-          IF.reset(2);
-          write(0xFF0F, IF.to_ulong());
-          IME = false;
-          op_push(PC);
-          PC.full = 0x0050;
-      break;
-    
-      case 3:
-          IF.reset(3);
-          write(0xFF0F, IF.to_ulong());
-          IME = false;
-          op_push(PC);
-          PC.full = 0x0058;
-      break;
-    
-      case 4:
-          IF.reset(4);
-          write(0xFF0F, IF.to_ulong());
-          IME = false;
-          op_push(PC);
-          PC.full = 0x0060;
-      break;
+  if(IE.test(req) && IF.test(req)){
+    halt = false;
+    if(IME){
+      switch(req){
+        case 0:
+            IF.reset(0);
+            write(0xFF0F, IF.to_ulong());
+            IME = false;
+            op_push(PC);
+            PC.full = 0x0040;
+        break;
+      
+        case 1:
+            IF.reset(1);
+            write(0xFF0F, IF.to_ulong());
+            IME = false;
+            op_push(PC);
+            PC.full = 0x0048;
+        break;
+      
+        case 2:
+            IF.reset(2);
+            write(0xFF0F, IF.to_ulong());
+            IME = false;
+            op_push(PC);
+            PC.full = 0x0050;
+        break;
+      
+        case 3:
+            IF.reset(3);
+            write(0xFF0F, IF.to_ulong());
+            IME = false;
+            op_push(PC);
+            PC.full = 0x0058;
+        break;
+      
+        case 4:
+            IF.reset(4);
+            write(0xFF0F, IF.to_ulong());
+            IME = false;
+            op_push(PC);
+            PC.full = 0x0060;
+        break;
+      }
     }
   }
-  halt = false;
 }
 
 void CPU::changeBank(uint16_t address, uint8_t data){
@@ -810,7 +814,7 @@ void CPU::op_rotate_A(){
  void CPU::op_restart(uint8_t p){
      PC.full++;
      op_push(PC);
-     PC.high = 0;
+     PC.high = 0x00;
      PC.low = p;
  }
  
