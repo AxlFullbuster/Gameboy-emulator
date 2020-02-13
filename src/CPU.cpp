@@ -33,8 +33,10 @@ void CPU::initialize(){
     HL.full = 0x014D;
     
     cycles = 0;
+    timer_tresh = 1024;
+    input_clock = 0;
 
-    memory[0xFF00] = 0x0F;
+    memory[0xFF00] = 0xFF;
     memory[0xFF05] = 0x00;
     memory[0xFF06] = 0x00;
     memory[0xFF07] = 0x00;
@@ -66,6 +68,10 @@ void CPU::initialize(){
     memory[0xFF4A] = 0x00;
     memory[0xFF4B] = 0x00;
     memory[0xFFFF] = 0x00;
+    
+    for(int i = 0; i < 8; i++){
+      buttons[i] = 1;
+    }
 }
 
 void CPU::clearMemory(){
@@ -77,6 +83,10 @@ void CPU::clearMemory(){
 
 //does the fetch, decode, and execute cycle
 void CPU::emulateCycle(){
+  
+if(PC.full == 0x0060){
+  return;
+}
   if(halt){
     cycles += 4;
   }else{
@@ -102,12 +112,11 @@ uint8_t CPU::read(uint16_t address){
     }else if(address >= 0xA000 && address <= 0xBFFF){
       uint16_t newAddress = address - 0xA000;
       return ROM[newAddress + (ramBank * 0x2000)];
-    }else{
-      return memory[address];
     }
-  }else{
-    return memory[address];
   }
+  
+  if(address == 0xFF00) input();
+  return memory[address];
 }
 
 //write to memory space
@@ -128,9 +137,6 @@ void CPU::write(uint16_t address, uint8_t data){
     }else if(address >= 0xFEA0 && address <= 0xFEFF){
        //don't write here the gameboy will get mad
        return;
-    }else if(address == 0xFF00){
-      //this address holds joypad information so don't write to it
-      return;
     }else if(address == 0xFF04){
       //writing to the divider register resets it to 0
       memory[address] = 0x00;
@@ -144,6 +150,34 @@ void CPU::write(uint16_t address, uint8_t data){
     }
 }
 
+void CPU::input(){
+  bitset<8> input(memory[0xFF00]);
+  direction = input.test(4);
+  button = input.test(5);
+  bool interrupt;
+
+if(!direction){
+  input[0] = buttons[0];
+  input[1] = buttons[1];
+  input[2] = buttons[2];
+  input[3] = buttons[3];
+}else if(!button){
+  input[0] = buttons[4];
+  input[1] = buttons[5];
+  input[2] = buttons[6];
+  input[3] = buttons[7];
+}
+  
+  memory[0xFF00] = input.to_ulong();
+  
+  for(int i = 0; i < 4; i++){
+    if(input[i] == 0) interrupt = true;
+  }
+  
+  if(interrupt) request_interrupt(4);
+  
+}
+
 void CPU::update_timers(){
   bitset<8> TAC(read(0xFF07));
   div_inc();
@@ -152,32 +186,27 @@ void CPU::update_timers(){
   timer_tresh -= timing;
   if(timer_tresh <= 0){
     check_freq();
-    write(0xFF05, read(0xFF05) + 1);
-
-    if(read(0xFF05) >= 255){
+    
+    if(read(0xFF05) == 0xFF){
       write(0xFF05, read(0xFF06));
       //call an interrupt
       request_interrupt(2);
+    }else{
+      write(0xFF05, read(0xFF05) + 1);
     }
   }
 }
 
 void CPU::div_inc(){
   int counter = 0;
-  counter += timing;
+  memory[0xFF04] += cycles;
   
-  if(counter >= 256){
-      memory[0xFF04]++;
-      counter = 0;
-  }
-  
-  if(read(0xFF04) >= 255){
+  if(read(0xFF04) >= 0xFF){
     write(0xFF04, 0x00);
   }
 }
 
 void CPU::check_freq(){
-  int input_clock;
   bitset<8> TAC(read(0xFF07));
   
   if(!TAC.test(0) && !TAC.test(1)) input_clock = 0;
@@ -225,6 +254,7 @@ void CPU::execute_interrupt(int req){
   bitset<8> IF (read(0xFF0F));
   if(IE.test(req) && IF.test(req)){
     halt = false;
+    if(req == 4) stop = false;
     if(IME){
       switch(req){
         case 0:

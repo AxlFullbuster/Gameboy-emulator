@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
     //check to make sure SDL initialized the window
     if(!display.init()){
         cout << "Failed to initialize display." << endl;
-    } else{
+    }else{
         bool quit = false;
         emu.loadGame(argv[1]);
         
@@ -54,46 +54,96 @@ int main(int argc, char* argv[]){
             ImGuiIO& io = ImGui::GetIO();
             int wheel = 0;
             SDL_Event e;
-            while( SDL_PollEvent( &e ) != 0 ) {
-                switch(e.type){
-                    case SDL_QUIT:
-                        quit = true;
-                    break;
+            while( SDL_PollEvent( &e ) != 0 ){
+                if (e.type == SDL_QUIT) quit = true;
                 
-                    case SDL_WINDOWEVENT:
-                        switch(e.window.event){
-                            case SDL_WINDOWEVENT_SIZE_CHANGED:
-                                io.DisplaySize.x = static_cast<float>(e.window.data1);
-                                io.DisplaySize.y = static_cast<float>(e.window.data2);
-                            break;
-                        
-                            default:
-                                //do nothing
-                            break;
-                        }
-                    break;
-                
-                
-                    case SDL_MOUSEWHEEL:
-                        wheel = e.wheel.y;
-                    break;
-                               
-                    case SDL_KEYDOWN:
-                    case SDL_KEYUP:{
-                        int key = e.key.keysym.scancode;
-                        IM_ASSERT(key >= 0 && key < IM_ARRAYSIZE(io.KeysDown));
-                        io.KeysDown[key] = (e.type == SDL_KEYDOWN);
-                        io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
-                        io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
-                        io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+                else if (e.type == SDL_WINDOWEVENT){
+                    if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED){
+                        io.DisplaySize.x = static_cast<float>(e.window.data1);
+                        io.DisplaySize.y = static_cast<float>(e.window.data2);
                     }
-                    break;
+                }
                 
-                    default:
-                        //do nothing
-                    break;
-                } 
+                
+                else if (e.type == SDL_MOUSEWHEEL){
+                    wheel = e.wheel.y;
+                }
+                
+                else if (e.type == SDL_KEYDOWN && e.key.repeat == 0 ){
+                    switch(e.key.keysym.sym){
+                        case SDLK_RIGHT:
+                            emu.buttons[0] = 0;
+                        break; 
+                        
+                        case SDLK_LEFT:
+                            emu.buttons[1] = 0;
+                        break;
+                    
+                        case SDLK_UP:
+                            emu.buttons[2] = 0;
+                        break;
+
+                        case SDLK_DOWN:
+                            emu.buttons[3] = 0;
+                        break;
+    
+                        case SDLK_z:
+                            emu.buttons[4] = 0;
+                        break;
+                    
+                        case SDLK_x:
+                            emu.buttons[5] = 0;
+                        break;
+                    
+                        case SDLK_SPACE:
+                            emu.buttons[6] = 0;
+                        break;
+
+                        case SDLK_RSHIFT:
+                            emu.buttons[7] = 0;
+                        break;
+                    }
+                }
+            
+                
+                else if(e.type == SDL_KEYUP && e.key.repeat == 0){
+                    switch(e.key.keysym.sym){
+                        case SDLK_RIGHT:
+                            emu.buttons[0] = 1;
+                        break; 
+                        
+                        case SDLK_LEFT:
+                            emu.buttons[1] = 1;
+                        break;
+                    
+                        case SDLK_UP:
+                            emu.buttons[2] = 1;
+                        break;
+
+                        case SDLK_DOWN:
+                            emu.buttons[3] = 1;
+                        break;
+
+                        case SDLK_z:
+                            emu.buttons[4] = 1;
+                        break;
+                    
+                        case SDLK_x:
+                            emu.buttons[5] = 1;
+                        break;
+                    
+                        case SDLK_SPACE:
+                            emu.buttons[6] = 1;
+                        break;
+
+                        case SDLK_RSHIFT:
+                            emu.buttons[7] = 1;
+                        break;
+                    }
+                }
             }
+
+                
             int mouseX, mouseY;
             const int buttons = SDL_GetMouseState(&mouseX, &mouseY);
             
@@ -103,30 +153,6 @@ int main(int argc, char* argv[]){
             io.MouseDown[1] = buttons & SDL_BUTTON(SDL_BUTTON_RIGHT);
             io.MouseWheel = static_cast<float>(wheel);
             
-            io.AddInputCharactersUTF8(e.text.text);
-            
-            io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
-            io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
-            io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
-            io.KeyMap[ImGuiKey_UpArrow] = SDL_SCANCODE_UP;
-            io.KeyMap[ImGuiKey_DownArrow] = SDL_SCANCODE_DOWN;
-            io.KeyMap[ImGuiKey_PageUp] = SDL_SCANCODE_PAGEUP;
-            io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
-            io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
-            io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
-            io.KeyMap[ImGuiKey_Insert] = SDL_SCANCODE_INSERT;
-            io.KeyMap[ImGuiKey_Delete] = SDL_SCANCODE_DELETE;
-            io.KeyMap[ImGuiKey_Backspace] = SDL_SCANCODE_BACKSPACE;
-            io.KeyMap[ImGuiKey_Space] = SDL_SCANCODE_SPACE;
-            io.KeyMap[ImGuiKey_Enter] = SDL_SCANCODE_RETURN;
-            io.KeyMap[ImGuiKey_Escape] = SDL_SCANCODE_ESCAPE;
-            io.KeyMap[ImGuiKey_KeyPadEnter] = SDL_SCANCODE_RETURN2;
-            io.KeyMap[ImGuiKey_A] = SDL_SCANCODE_A;
-            io.KeyMap[ImGuiKey_C] = SDL_SCANCODE_C;
-            io.KeyMap[ImGuiKey_V] = SDL_SCANCODE_V;
-            io.KeyMap[ImGuiKey_X] = SDL_SCANCODE_X;
-            io.KeyMap[ImGuiKey_Y] = SDL_SCANCODE_Y;
-            io.KeyMap[ImGuiKey_Z] = SDL_SCANCODE_Z;
             
             display.draw_debugger();
             emulate();

@@ -43,6 +43,7 @@ class CPU{
         bool keep7;
         bool A;
         bool halt;
+        bool stop;
         
         
         bool extRAM;
@@ -51,6 +52,7 @@ class CPU{
         int ramBank;
         int romBank;
         int timer_tresh;
+        int input_clock;
         void checkBank();
         void changeBank(uint16_t address, uint8_t data);
         void execute_interrupt(int req);
@@ -62,6 +64,7 @@ class CPU{
         
         void load_bios();
         void clearMemory();
+        void input();
         
         
         
@@ -106,11 +109,14 @@ class CPU{
         CPU();
         ~CPU();
         
+        bool buttons[8];
         
         int timing;
         
         bool loadGame(const char* filename);
         bool bios;
+        bool direction;
+        bool button;
         
         void emulateCycle();
         void increment_scanline();

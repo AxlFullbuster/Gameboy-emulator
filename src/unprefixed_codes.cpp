@@ -115,7 +115,7 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x10: //STOP
-            //halt = true;
+            stop = true;
             cycles += 4;
             PC.full += 2;
         break;

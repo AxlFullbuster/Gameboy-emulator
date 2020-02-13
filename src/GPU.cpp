@@ -551,9 +551,11 @@ void GPU::draw_debugger(){
 	ImGui::End();
     
     
+    
     ImGui::Render();
     ImGuiSDL::Render(ImGui::GetDrawData());
     
+    SDL_Delay(10);
 }
 
 
