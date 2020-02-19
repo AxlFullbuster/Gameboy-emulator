@@ -115,7 +115,7 @@ void CPU::decode1(uint8_t opcode){
         break;
     
         case 0x10: //STOP
-            stop = true;
+            //stop = true;
             cycles += 4;
             PC.full += 2;
         break;
@@ -1700,7 +1700,7 @@ void CPU::decode1(uint8_t opcode){
     
         case 0xFF: //RST 38h
             cycles += 16;
-            op_restart(0x30);
+            op_restart(0x38);
         break;
     
         default:

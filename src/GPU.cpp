@@ -550,6 +550,14 @@ void GPU::draw_debugger(){
     ImGui::Image(texture, ImVec2(160*2, 144*2));
 	ImGui::End();
     
+    ImGui::Begin("Misc Registers");
+    ImGui::Text("Halt:%d",emu.halt);
+    ImGui::End();
+    
+    ImGui::Begin("Memory Banks");
+    ImGui::Text("ROM bank:%d", emu.romBank);
+    ImGui::Text("RAM bank:%d", emu.ramBank);
+    ImGui::End();
     
     
     ImGui::Render();

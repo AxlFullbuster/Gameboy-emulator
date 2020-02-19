@@ -83,10 +83,6 @@ void CPU::clearMemory(){
 
 //does the fetch, decode, and execute cycle
 void CPU::emulateCycle(){
-  
-if(PC.full == 0x0060){
-  return;
-}
   if(halt){
     cycles += 4;
   }else{
@@ -105,16 +101,14 @@ if(PC.full == 0x0060){
 
 //read from memory space
 uint8_t CPU::read(uint16_t address){
-  if(MBC){
     if(address >= 0x4000 && address <= 0x7FFF){
       uint16_t newAddress = address - 0x4000;
       return ROM[newAddress +  (romBank * 0x4000)];
     }else if(address >= 0xA000 && address <= 0xBFFF){
       uint16_t newAddress = address - 0xA000;
-      return ROM[newAddress + (ramBank * 0x2000)];
+      return RAM[newAddress + (ramBank * 0x2000)];
     }
-  }
-  
+      
   if(address == 0xFF00) input();
   return memory[address];
 }
@@ -122,14 +116,12 @@ uint8_t CPU::read(uint16_t address){
 //write to memory space
 void CPU::write(uint16_t address, uint8_t data){
     if(address < 0x8000){
-       if(MBC) changeBank(address, data);
-       else return;
+       changeBank(address, data);
     }else if(address >= 0xA000 && address <= 0xBFFF){
-        if(extRAM){
+        if(extRAM && MBC){
           uint16_t newAddress = address - 0xA000;
           RAM[newAddress + (ramBank * 0x2000)] = data;
-        }else{
-          return;
+          extRAM = false;
         }
     }else if(address >= 0xE000 && address <= 0xFDFF){
        memory[address] = data;
@@ -140,6 +132,17 @@ void CPU::write(uint16_t address, uint8_t data){
     }else if(address == 0xFF04){
       //writing to the divider register resets it to 0
       memory[address] = 0x00;
+    }else if(address == 0xFF07){
+      int prev_freq = input_clock;
+      memory[address] = data;
+      
+      check_freq();
+      int new_freq = input_clock;
+      
+      if(new_freq != prev_freq){
+        set_freq();
+      }
+      
     }else if(address == 0xFF44){
        //all writes to the scanline will reset the value
        memory[address] = 0;
@@ -182,12 +185,12 @@ void CPU::update_timers(){
   bitset<8> TAC(read(0xFF07));
   div_inc();
   if(!TAC.test(2)) return;
-  
   timer_tresh -= timing;
   if(timer_tresh <= 0){
     check_freq();
+    set_freq();
     
-    if(read(0xFF05) == 0xFF){
+    if(read(0xFF05) >= 0xFF){
       write(0xFF05, read(0xFF06));
       //call an interrupt
       request_interrupt(2);
@@ -198,13 +201,14 @@ void CPU::update_timers(){
 }
 
 void CPU::div_inc(){
-  int counter = 0;
-  memory[0xFF04] += cycles;
+  div_counter += timing;
   
-  if(read(0xFF04) >= 0xFF){
-    write(0xFF04, 0x00);
+  if(div_counter >= 0xFF){
+    memory[0xFF04]++;
+    div_counter = 0;
   }
 }
+
 
 void CPU::check_freq(){
   bitset<8> TAC(read(0xFF07));
@@ -213,25 +217,29 @@ void CPU::check_freq(){
   else if(TAC.test(0) && !TAC.test(1)) input_clock = 1;
   else if(!TAC.test(0) && TAC.test(1)) input_clock = 2;
   else input_clock = 3;
-  
-  switch(input_clock){
-        case 0:
-          timer_tresh = 1024;
-        break;
-      
-        case 1:
-          timer_tresh = 16;
-        break;
-      
-        case 2:
-          timer_tresh = 64;
-        break;
-      
-        case 3:
-          timer_tresh = 256;
-        break;
-    }
 }
+
+void CPU::set_freq(){
+  switch(input_clock){
+    case 0:
+      timer_tresh = 1024;
+    break;
+  
+    case 1:
+      timer_tresh = 16;
+    break;
+  
+    case 2:
+      timer_tresh = 64;
+    break;
+  
+    case 3:
+      timer_tresh = 256;
+    break;
+  } 
+}
+
+
 
 void CPU::request_interrupt(int req){
   bitset<8> IF (read(0xFF0F));
@@ -244,7 +252,6 @@ void CPU::check_interrupt(){
   for(int i = 0; i < 5; i++){
     if(IF.test(i)){
       execute_interrupt(i);
-      return;
     }
   }
 }
@@ -303,36 +310,30 @@ void CPU::execute_interrupt(int req){
 
 void CPU::changeBank(uint16_t address, uint8_t data){
   if(address < 0x2000){
-    unsigned value = data & 0xF;
+    uint8_t value = data & 0xF;
     if(value == 0x0A) extRAM = true;
     else extRAM = false;
   }else if(address >= 0x2000 && address <= 0x3FFF){
-    unsigned bits = data & 0x1F;
-    romBank &= ~0x1F;
-    romBank |= bits;
-    if(romBank == 0x00 || romBank == 0x20 || romBank == 0x40 || romBank == 0x60){
+    lower_rom_bank = data & 0x1F;
+    romBank = lower_rom_bank;
+    
+    if(romBank == 0x00){
       romBank++;
     }
+    
   }else if(address >= 0x4000 && address <= 0x5FFF){
-    unsigned banknum = data & 0x11;
-    if(rombanking){
-      romBank &= 0x1F;
-      data &= ~0x1F;
-      romBank |= data;
-      if(romBank == 0x00 || romBank == 0x20 || romBank == 0x40 || romBank == 0x60){
-        romBank++;
-      }
-    }else{
-      ramBank = banknum;
+    upper_banknum = data & 0x03;
+  
+    if(bankmode == 0x00){
+      romBank = (lower_rom_bank + (upper_banknum << 5)); 
     }
+    
+    if(bankmode == 0x01){
+      ramBank = upper_banknum;
+    }
+      
   }else if(address >=0x6000 && address <= 0x7FFF){
-    unsigned check = data & 0x01;
-    if(check == 0){
-      rombanking = true;
-      ramBank = 0;
-    }else{
-     rombanking = false;
-    }
+    bankmode = data & 0x01;
   }
 }
 
