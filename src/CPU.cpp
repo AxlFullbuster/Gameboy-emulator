@@ -101,11 +101,34 @@ void CPU::emulateCycle(){
 
 //read from memory space
 uint8_t CPU::read(uint16_t address){
-    if(address >= 0x4000 && address <= 0x7FFF){
+    if(address <= 0x3FFF){
+      
+      
+      if(bankmode == 0x01){
+        romBank = upper_banknum << 5;
+        uint16_t offset = romBank * 0x4000;
+        
+        return ROM[address + offset];
+      }
+      
+      
+      return memory[address];
+    }else if(address >= 0x4000 && address <= 0x7FFF){
+      
       uint16_t newAddress = address - 0x4000;
+      romBank = lower_rom_bank;
+      romBank |= upper_banknum << 5;
+      
       return ROM[newAddress +  (romBank * 0x4000)];
+    
     }else if(address >= 0xA000 && address <= 0xBFFF){
+      
       uint16_t newAddress = address - 0xA000;
+      
+      if(bankmode == 0x01){
+        ramBank = upper_banknum;
+      }
+      
       return RAM[newAddress + (ramBank * 0x2000)];
     }
       
@@ -115,10 +138,25 @@ uint8_t CPU::read(uint16_t address){
 
 //write to memory space
 void CPU::write(uint16_t address, uint8_t data){
-    if(address < 0x8000){
-       changeBank(address, data);
+    if(address <= 0x1FFF){
+      uint8_t value = data & 0x0F;
+      if(value == 0x0A) extRAM = true;
+      else extRAM = false;
+    }else if(address >= 0x2000 && address <= 0x3FFF){
+      lower_rom_bank = data & 0x1F;
+      
+      if(lower_rom_bank == 0x00){
+        lower_rom_bank++;
+      }
+      
+    }else if(address >= 0x4000 && address <= 0x5FFF){
+        upper_banknum = data & 0x03;
+        
+    }else if(address >=0x6000 && address <= 0x7FFF){
+        bankmode = data & 0x01;
+        
     }else if(address >= 0xA000 && address <= 0xBFFF){
-        if(extRAM && MBC){
+        if(extRAM){
           uint16_t newAddress = address - 0xA000;
           RAM[newAddress + (ramBank * 0x2000)] = data;
           extRAM = false;
@@ -309,32 +347,7 @@ void CPU::execute_interrupt(int req){
 }
 
 void CPU::changeBank(uint16_t address, uint8_t data){
-  if(address < 0x2000){
-    uint8_t value = data & 0xF;
-    if(value == 0x0A) extRAM = true;
-    else extRAM = false;
-  }else if(address >= 0x2000 && address <= 0x3FFF){
-    lower_rom_bank = data & 0x1F;
-    romBank = lower_rom_bank;
-    
-    if(romBank == 0x00){
-      romBank++;
-    }
-    
-  }else if(address >= 0x4000 && address <= 0x5FFF){
-    upper_banknum = data & 0x03;
   
-    if(bankmode == 0x00){
-      romBank = (lower_rom_bank + (upper_banknum << 5)); 
-    }
-    
-    if(bankmode == 0x01){
-      ramBank = upper_banknum;
-    }
-      
-  }else if(address >=0x6000 && address <= 0x7FFF){
-    bankmode = data & 0x01;
-  }
 }
 
 
@@ -400,8 +413,9 @@ void CPU::load_bios(){
 
 void CPU::checkBank(){
   if(ROM[0x147] == 1 || ROM[0x147] == 2 || ROM[0x147] == 3){
-    romBank = 1;
+    romBank = 0;
     ramBank = 0;
+    lower_rom_bank = 0x01;
     MBC = true;
   }else{
     MBC = false;

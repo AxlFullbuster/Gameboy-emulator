@@ -557,6 +557,8 @@ void GPU::draw_debugger(){
     ImGui::Begin("Memory Banks");
     ImGui::Text("ROM bank:%d", emu.romBank);
     ImGui::Text("RAM bank:%d", emu.ramBank);
+    ImGui::Text("Banking Mode:%d", emu.bankmode);
+    ImGui::Text("Upper Bank Bits:%d", emu.upper_banknum);
     ImGui::End();
     
     

@@ -129,7 +129,7 @@ class CPU{
         int get_cycles(int prev);
         uint8_t ramBank;
         uint8_t romBank;
-        bool bankmode;
+        uint8_t bankmode;
         uint8_t lower_rom_bank;
         uint8_t upper_banknum;
         
