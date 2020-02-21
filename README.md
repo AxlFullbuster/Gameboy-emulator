@@ -10,15 +10,15 @@ There are currently no plans to emulate sound and memory banking past the first 
 # Current Progress  
 Currently debugging timer and MBC switch.
 
-#Issues
-###Memory Banking
+# Issues
+### Memory Banking
 The MBC switch is currently not working correctly and as of this commit only these 2 roms run on the emulator without issue:
 "Tetris", Blargg's "cpu_instrs".
 
 The roms that are not running correctly are the following:
 "The Amazing SpiderMan", "Aladdin", "Zelda Link's Awakening".
 
-###Timer
+### Timer
 The Timer is also not fully implemented due to issues with TIMA, TMA, and TAC registers. The DIV register is also not
 correct according to test roms. But is able to run well enough for Tetris to randomize it's blocks.
 
