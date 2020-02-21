@@ -551,14 +551,16 @@ void GPU::draw_debugger(){
 	ImGui::End();
     
     ImGui::Begin("Misc Registers");
-    ImGui::Text("Halt:%d",emu.halt);
+    ImGui::Text("Halt:%d",emu.get_halt());
+    ImGui::Text("IME:%d", emu.get_ime());
     ImGui::End();
     
     ImGui::Begin("Memory Banks");
-    ImGui::Text("ROM bank:%d", emu.romBank);
-    ImGui::Text("RAM bank:%d", emu.ramBank);
-    ImGui::Text("Banking Mode:%d", emu.bankmode);
-    ImGui::Text("Upper Bank Bits:%d", emu.upper_banknum);
+    ImGui::Text("ROM bank:%d", emu.get_rombank());
+    ImGui::Text("RAM bank:%d", emu.get_rambank());
+    ImGui::Text("Lower bank:%d", emu.get_lowerbank());
+    ImGui::Text("Upper bank:%d", emu.get_upperbank());
+    ImGui::Text("Bank Mode:%d", emu.get_bankmode());
     ImGui::End();
     
     

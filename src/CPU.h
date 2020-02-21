@@ -56,6 +56,12 @@ class CPU{
         void changeBank(uint16_t address, uint8_t data);
         void execute_interrupt(int req);
         
+        uint8_t ramBank;
+        uint8_t romBank;
+        uint8_t bankmode;
+        uint8_t lower_rom_bank;
+        uint8_t upper_banknum;
+        
         
         void DMA(uint8_t data);
         void check_freq();
@@ -127,13 +133,7 @@ class CPU{
     
        
         int get_cycles(int prev);
-        uint8_t ramBank;
-        uint8_t romBank;
-        uint8_t bankmode;
-        uint8_t lower_rom_bank;
-        uint8_t upper_banknum;
-        
-        
+       
         //methods for debugger
         uint16_t get_AF();
         uint16_t get_BC();
@@ -152,6 +152,12 @@ class CPU{
         uint8_t get_F();
         uint8_t get_OP();
         bool get_ime();
+        bool get_halt();
+        uint8_t get_rombank();
+        uint8_t get_rambank();
+        uint8_t get_lowerbank();
+        uint8_t get_upperbank();
+        uint8_t get_bankmode();
         
         uint8_t read(uint16_t address);
         void write(uint16_t address, uint8_t data);

@@ -8,12 +8,26 @@ The goal of this project is to create an emulator that can run games somewhat ac
 There are currently no plans to emulate sound and memory banking past the first type.    
 
 # Current Progress  
-Implemented Joypad control, currently debugging timer and MBC switch.   
+Currently debugging timer and MBC switch.
+
+#Issues
+###Memory Banking
+The MBC switch is currently not working correctly and as of this commit only these 2 roms run on the emulator without issue:
+"Tetris", Blargg's "cpu_instrs".
+
+The roms that are not running correctly are the following:
+"The Amazing SpiderMan", "Aladdin", "Zelda Link's Awakening".
+
+###Timer
+The Timer is also not fully implemented due to issues with TIMA, TMA, and TAC registers. The DIV register is also not
+correct according to test roms. But is able to run well enough for Tetris to randomize it's blocks.
 
 # References/Resources    
 [Gameboy Development Manual Version 1.1](https://archive.org/details/GameBoyProgManVer1.1)  
 [GameLad Development Wiki](https://github.com/Dooskington/GameLad/wiki)  
 [Gameboy Operation Code Table](https://izik1.github.io/gbops/)  
+[Blargg's Test Roms](https://github.com/retrio/gb-test-roms)  
+[Mooneye Test Roms](https://github.com/Gekkio/mooneye-gb)  
 [tcbrindle's CMake Scripts](https://github.com/tcbrindle/sdl2-cmake-scripts)  
 [imgui library](https://github.com/ocornut/imgui)  
 [imgui_sdl library](https://github.com/Tyyppi77/imgui_sdl)  

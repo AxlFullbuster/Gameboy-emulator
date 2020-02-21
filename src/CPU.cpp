@@ -35,6 +35,7 @@ void CPU::initialize(){
     cycles = 0;
     timer_tresh = 1024;
     input_clock = 0;
+    div_counter = 0;
 
     memory[0xFF00] = 0xFF;
     memory[0xFF05] = 0x00;
@@ -101,60 +102,49 @@ void CPU::emulateCycle(){
 
 //read from memory space
 uint8_t CPU::read(uint16_t address){
+  if(MBC){
     if(address <= 0x3FFF){
       
       
       if(bankmode == 0x01){
         romBank = upper_banknum << 5;
         uint16_t offset = romBank * 0x4000;
-        
         return ROM[address + offset];
       }
       
-      
       return memory[address];
     }else if(address >= 0x4000 && address <= 0x7FFF){
-      
       uint16_t newAddress = address - 0x4000;
       romBank = lower_rom_bank;
       romBank |= upper_banknum << 5;
       
       return ROM[newAddress +  (romBank * 0x4000)];
-    
     }else if(address >= 0xA000 && address <= 0xBFFF){
-      
       uint16_t newAddress = address - 0xA000;
       
       if(bankmode == 0x01){
         ramBank = upper_banknum;
       }
-      
       return RAM[newAddress + (ramBank * 0x2000)];
+    }else if(address >= 0x4000 && address <= 0x7FFF){
+      uint16_t newAddress = address - 0x4000;
+      return ROM[newAddress +  (romBank * 0x4000)];
+    }else if(address >= 0xA000 && address <= 0xBFFF){
+      uint16_t newAddress = address - 0xA000;
+      return ROM[newAddress + (ramBank * 0x2000)];
     }
-      
+  }
+  
   if(address == 0xFF00) input();
   return memory[address];
 }
 
+
 //write to memory space
 void CPU::write(uint16_t address, uint8_t data){
-    if(address <= 0x1FFF){
-      uint8_t value = data & 0x0F;
-      if(value == 0x0A) extRAM = true;
-      else extRAM = false;
-    }else if(address >= 0x2000 && address <= 0x3FFF){
-      lower_rom_bank = data & 0x1F;
-      
-      if(lower_rom_bank == 0x00){
-        lower_rom_bank++;
-      }
-      
-    }else if(address >= 0x4000 && address <= 0x5FFF){
-        upper_banknum = data & 0x03;
-        
-    }else if(address >=0x6000 && address <= 0x7FFF){
-        bankmode = data & 0x01;
-        
+    if(address < 0x8000){
+       if(MBC) changeBank(address, data);
+       else return;
     }else if(address >= 0xA000 && address <= 0xBFFF){
         if(extRAM){
           uint16_t newAddress = address - 0xA000;
@@ -180,7 +170,6 @@ void CPU::write(uint16_t address, uint8_t data){
       if(new_freq != prev_freq){
         set_freq();
       }
-      
     }else if(address == 0xFF44){
        //all writes to the scanline will reset the value
        memory[address] = 0;
@@ -277,8 +266,6 @@ void CPU::set_freq(){
   } 
 }
 
-
-
 void CPU::request_interrupt(int req){
   bitset<8> IF (read(0xFF0F));
   IF.set(req);
@@ -347,8 +334,25 @@ void CPU::execute_interrupt(int req){
 }
 
 void CPU::changeBank(uint16_t address, uint8_t data){
-  
+  if(address <= 0x1FFF){
+      uint8_t value = data & 0x0F;
+      if(value == 0x0A) extRAM = true;
+      else extRAM = false;
+    }else if(address >= 0x2000 && address <= 0x3FFF){
+      lower_rom_bank = data & 0x1F;
+      
+      if(lower_rom_bank == 0x00){
+        lower_rom_bank++;
+      }
+      
+    }else if(address >= 0x4000 && address <= 0x5FFF){
+        upper_banknum = data & 0x03;
+        
+    }else if(address >=0x6000 && address <= 0x7FFF){
+        bankmode = data & 0x01;
+    }
 }
+    
 
 
 //A method for the GPU which increments the scaline value by 1
@@ -416,6 +420,8 @@ void CPU::checkBank(){
     romBank = 0;
     ramBank = 0;
     lower_rom_bank = 0x01;
+    upper_banknum = 0x00;
+    bankmode = 0x00;
     MBC = true;
   }else{
     MBC = false;
@@ -991,6 +997,30 @@ int CPU::get_cycles(int prev){
 
 bool CPU::get_ime(){
   return IME;
+}
+
+bool CPU::get_halt(){
+  return halt;
+}
+
+uint8_t CPU::get_rombank(){
+  return romBank;
+}
+
+uint8_t CPU::get_rambank(){
+  return ramBank;
+}
+
+uint8_t CPU::get_lowerbank(){
+  return lower_rom_bank;
+}
+
+uint8_t CPU::get_upperbank(){
+  return upper_banknum;
+}
+
+uint8_t CPU::get_bankmode(){
+  return bankmode;
 }
 
  
