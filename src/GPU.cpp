@@ -6,8 +6,11 @@ using std::cout;
 using std::endl;
 using std::bitset;
 
-//Note to self: finish commenting out the code 
 
+/*! The Constructor for the class, we take an instance of a
+ *CPU class so that we can get the accurate values in the
+ *memory map.
+ */
 GPU::GPU(CPU &emulator) : emu(emulator){
     //Do Nothing
 }
@@ -16,8 +19,9 @@ GPU::~GPU(){
     //Do Nothing
 }
 
-/*compares these two registers, depending on their values
- *the GPU will trigger a stat interrupt
+/*! Compares the values of yCoordinate and lyCompare and sees if they are equal.
+ *If they are we generate a stat interrupt and set the second bit in the lcd_status
+ *registers. If they aren't we unset the second bit and leave the method.
  */
 void GPU::stat_interrupt(){
     if(yCoordinate == lyCompare){
@@ -29,7 +33,7 @@ void GPU::stat_interrupt(){
     }
 }
 
-//initialize various registers in the Gameboy GPU
+
 void GPU::init_registers(){
     scrollY = emu.read(0xFF42);
     scrollX = emu.read(0xFF43);
@@ -45,17 +49,27 @@ void GPU::init_registers(){
     lcd_status = emu.read(0xFF41);
 }
 
-/*change what mode the gpu is in depending on the
- *current value of gpu_cycles
+/*! This method first checks to see if the lcd display has been enabled.
+ *This is done by checking the first bit in the lcd_control register.
+ *If it's turned off we set the mode to 1 and reset the value of gpu_cycles to 456 and exit
+ *the method. If it's turned on we then check to see if the yCoordinate value is above or
+ *equal to 144 if it is we set the mode to 1. If it's lower than 144 we check the value
+ *of gpu_cycles and determine what to do next:
+ *
+ *If gpu_cycles is greater than or equal to 376 we set the mode to 2.
+ *
+ *If gpu_cycles is greater than or equal to 204 we set the mode to 3.
+ *
+ *If gpu_cycles is less than 204 we set the mode to 0.
+ *
+ *Once all of the above is done we check to see if a stat_interrupt has occured by calling
+ *the method that checks for it. We also check to see if the mode has changed when the method
+ *was run if so we request an interrupt.
  */
 void GPU::check_mode(){
     //holds the current mode the gpu is in
     int currentmode = mode;
     
-    /* if the lcd display is disabled go into mode
-     * 1, reset the scanline, and reset the gpu cycle
-     * count.
-     */
     if(!lcd_control.test(7)){
         mode = 1;
         lcd_status.set(0);
@@ -66,10 +80,7 @@ void GPU::check_mode(){
         return;
     }
 
-    /*if we're in v-blank enter mode 1 and call an interrupt.
-     *otherwise check the current value of gpu_cycles and switch
-     *to the specified mode.
-     */
+
     if(yCoordinate >= 144){
         mode = 1;
         lcd_status.set(0);
@@ -89,36 +100,38 @@ void GPU::check_mode(){
             lcd_status.reset(1);
         }
     }
-    //call an interrupt if you changed modes
+
     if(currentmode != mode){
         emu.request_interrupt(1);
     }
+    
     stat_interrupt();
     emu.write(0xFF41, lcd_status.to_ulong());
 }
 
-/*checks the scanline value and updates the gpu
- *cycle value.
+/*! This method monitors what value the yCoordinate is on in the display. The first thing that
+ *it does is initialize the registers in the GPU and calls the check_mode method. It then checks
+ *to see if the lcd display is enabled. If it is we subtract the amount of cycles an instruction
+ *took to execute from gpu_cycles. If it isn't we return from the method. After that it checks to see
+ *if gpu_cycles is less than 0. If it isn't we just leave the method. If it is we reset it to 456 and increment the scanline value by 1. We then check
+ *to see what value the yCoordinate has and decide what to do next:
+ *
+ *If yCoordinate is less than 144 we draw the scaline onto the screen.
+ *
+ *If yCoordinate is equal to 144 we are in the v-blank interrupt so we request one.
+ *
+ *If yCoordinate is greater than or equal to 153 we reset the scaline value to o.
  */
 void GPU::check_scanline(){
     init_registers();
     check_mode();
     
-    /*if the lcd display is enabled subtract the
-     *amount of cycles it took for the last cpu instruction
-     *to execute from gpu_cycles. Otherwise exit the function.
-     */
     if(lcd_control.test(7)){
         gpu_cycles -= emu.timing;
     }else{
         return;
     }
     
-    /*if gpu_cycles is 0 reset the value to 456 and move onto
-     *the next line. Afterwards check the scanline value and either
-     *draw tile/sprite data, refresh the screen, or reset the value once it
-     *reaches 153.
-     */
     if(gpu_cycles <= 0){
         gpu_cycles = 456;
         emu.increment_scanline();
@@ -133,9 +146,7 @@ void GPU::check_scanline(){
     }
 }
 
-/*draws tile/sprite data depending on the values of
- *the 0 and 1 bit in the lcd control register
- */
+
 void GPU::draw_scanline(){
     if(lcd_control.test(0)){
         draw_tiles();
@@ -512,13 +523,10 @@ void GPU::draw_debugger(){
      */
     ImGui::Columns(3);
     ImGui::Text("16-bit Registers");
-    
-    ImGui::Text("Program Counter:0x%X", emu.get_PC());
     ImGui::Text("AF Register:0x%X", emu.get_AF());
     ImGui::Text("BC Register:0x%X", emu.get_BC());
     ImGui::Text("DE Register:0x%X", emu.get_DE());
     ImGui::Text("HL Register:0x%X", emu.get_HL());
-    ImGui::Text("SP Register:0x%X", emu.get_SP());
     ImGui::NextColumn(); // go to the next column in the window
     
     ImGui::Text("8-bit Registers");
@@ -538,13 +546,8 @@ void GPU::draw_debugger(){
     ImGui::Text("HC:%d", flags.test(5));
     ImGui::Text("C:%d", flags.test(4));
     
-    
     ImGui::End();
 
-    //print out the executed operation code
-    ImGui::Begin("Opcode");
-    ImGui::Text("Executed Code:0x%X", emu.get_OP());
-    ImGui::End();
     
     ImGui::Begin("Gameboy");
     ImGui::Image(texture, ImVec2(160*2, 144*2));
@@ -555,14 +558,13 @@ void GPU::draw_debugger(){
     ImGui::Text("IME:%d", emu.get_ime());
     ImGui::End();
     
-    ImGui::Begin("Memory Banks");
-    ImGui::Text("ROM bank:%d", emu.get_rombank());
-    ImGui::Text("RAM bank:%d", emu.get_rambank());
-    ImGui::Text("Lower bank:%d", emu.get_lowerbank());
-    ImGui::Text("Upper bank:%d", emu.get_upperbank());
-    ImGui::Text("Bank Mode:%d", emu.get_bankmode());
+    ImGui::Begin("Execution Cycle");
+    ImGui::Text("Program Counter:0x%X", emu.get_PC());
+    ImGui::Text("Executed Code:0x%X", emu.get_OP());
+    ImGui::Text("SP Register:0x%X", emu.get_SP());
+    if (ImGui::Button("Stop")) emu.debug = true;
+    if (ImGui::Button("Continue")) emu.debug = false;
     ImGui::End();
-    
     
     ImGui::Render();
     ImGuiSDL::Render(ImGui::GetDrawData());

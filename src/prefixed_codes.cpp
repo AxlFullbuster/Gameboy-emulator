@@ -2,6 +2,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/*!
+ *This is a list of the prefixed instructions executed in this method:
+ *
+ *RL: Rotates the bits of a register to the left. It can also move the contents of the carry flag into the register.
+ *
+ *RR: Rotates the bits of a register to the right. It can also move the contents of the carry flag into the register.
+ *
+ *SRA, SLA, SRL: Shifts the bits of a register either left or right. The depending on which of these intructions were executed
+ *the carry flag's value will change to the value in the 0 or 7th bit. It will also unset the value of either the 0 or 7th flag or
+ *keep them the same.
+ *
+ *SWAP: Swaps the values of the higher order bits(7-4) with the values of the lower order bits (0-3).
+ *
+ *BIT: Checks if the bit number in a specific register is set or unset. Depending on the value it sets or unsets the zero flag.
+ *
+ *SET: Sets the specific bit value in the register.
+ *
+ *RES: Unsets the specific bit value in the register.
+ */
 void CPU::decode2(uint8_t opcode){
     switch(opcode){
         case 0x00: //RLC B

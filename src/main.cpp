@@ -33,8 +33,6 @@ int main(int argc, char* argv[]){
         return 1;
     }
     
-    cout << "Would you like to display the debugger? Yes(1), No(0): ";
-    cin >> display.debug;
     cout << "Are you trying to run the bios rom? Yes(1), No(0): ";
     cin >> emu.bios;
     

@@ -23,7 +23,11 @@ CPU::~CPU(){
     //do nothing
 }
 
-//initialize the emulator values to the ones given in the boot rom
+/*!
+ *initializes the memory map and the registers to their state after
+ *the bios rom has finished execution. This is run for every single
+ *gameboy rom.
+ */
 void CPU::initialize(){
     PC.full = 0x0100;
     SP.full = 0xFFFE;
@@ -33,8 +37,6 @@ void CPU::initialize(){
     HL.full = 0x014D;
     
     cycles = 0;
-    timer_tresh = 1024;
-    input_clock = 0;
     div_counter = 0;
 
     memory[0xFF00] = 0xFF;
@@ -81,105 +83,120 @@ void CPU::clearMemory(){
   }
 }
 
-
-//does the fetch, decode, and execute cycle
+/*!
+ *Depending on the value of the opcode this method will call either
+ *decode1 or decode2 to execute a prefixed or unprefixed instruction.
+ *if the emulator is in a halt state this method will just add 4 clock
+ *cycles to the total cycle count and return. If the emulator is in
+ *a debugging state it will do nothing.
+ */
 void CPU::emulateCycle(){
   if(halt){
     cycles += 4;
-  }else{
-   int current_cycle = cycles;
-     opcode = read(PC.full);
-        if(opcode != 0xCB){
-           decode1(opcode);
-        }else {
-            opcode = read(PC.full + 1);
-            cycles += 4;
-            decode2(opcode);
-        }
-      timing = get_cycles(current_cycle);
-  }
-}
-
-//read from memory space
-uint8_t CPU::read(uint16_t address){
-  if(MBC){
-    if(address <= 0x3FFF){
-      
-      
-      if(bankmode == 0x01){
-        romBank = upper_banknum << 5;
-        uint16_t offset = romBank * 0x4000;
-        return ROM[address + offset];
-      }
-      
-      return memory[address];
-    }else if(address >= 0x4000 && address <= 0x7FFF){
-      uint16_t newAddress = address - 0x4000;
-      romBank = lower_rom_bank;
-      romBank |= upper_banknum << 5;
-      
-      return ROM[newAddress +  (romBank * 0x4000)];
-    }else if(address >= 0xA000 && address <= 0xBFFF){
-      uint16_t newAddress = address - 0xA000;
-      
-      if(bankmode == 0x01){
-        ramBank = upper_banknum;
-      }
-      return RAM[newAddress + (ramBank * 0x2000)];
-    }else if(address >= 0x4000 && address <= 0x7FFF){
-      uint16_t newAddress = address - 0x4000;
-      return ROM[newAddress +  (romBank * 0x4000)];
-    }else if(address >= 0xA000 && address <= 0xBFFF){
-      uint16_t newAddress = address - 0xA000;
-      return ROM[newAddress + (ramBank * 0x2000)];
-    }
+    return;
   }
   
+  if(debug) return;
+  
+  int current_cycle = cycles;
+  opcode = read(PC.full);
+  if(opcode != 0xCB){
+     decode1(opcode);
+  }else {
+      opcode = read(PC.full + 1);
+      cycles += 4;
+      decode2(opcode);
+  }
+  timing = get_cycles(current_cycle);
+}
+
+/*!
+ *The exception to this rule is when the
+ *emulator reads a value in the input register. Instead of returning
+ *the value it will call the input method.
+ *
+ *@param address the address we want to read from
+ */
+uint8_t CPU::read(uint16_t address){
   if(address == 0xFF00) input();
   return memory[address];
 }
 
 
-//write to memory space
+/*!
+ *Writing a value into the memory map is tricky. Since there
+ *are important registers that are part of the cpu's functionality
+ *the emulator should not be allowed to write into everything.
+ *To enforce this rule this method will check where data is being
+ *written to and will then decide what to do next.
+ *
+ *@param address the memory address we want to write to
+ *@param data the data we are trying to put into the memory map
+ *
+ *This is what will happen for specific address ranges:
+ *
+ *Address <= 0x7FFF: This address portion stores ROM data so we return from the function.
+ *
+ *Address >= 0xA000 && Address <= 0xBFFF: This address range stores cartridge RAM data,
+ *this isn't emulated in this version so we just return from the function.
+ *
+ *Address >=0xE000 && address <= 0xFDFF: This address range stores echo data from the RAM portion
+ *of the memory map so anything that is written here will be written to the RAM portion as well.
+ *
+ *Address >= 0xFEA0 && Address <= 0xFEFF: This address range isn't used for anything, I don't know why
+ *but all the references I used recommended not writing to this portion of memory. So we just return
+ *from the function.
+ *
+ *Address == 0xFF04: This address is the divider register, if the emulator tries to write something here
+ *we reset the value to 0.
+ *
+ *Address == 0xFF46: This address is responsible for direct memory access so I call a method that does
+ *that here.
+ *
+ *Address == anything else: By this point it should be safe to write into the memory map since the more critical
+ *features have been caught.
+ */
 void CPU::write(uint16_t address, uint8_t data){
     if(address < 0x8000){
-       if(MBC) changeBank(address, data);
-       else return;
-    }else if(address >= 0xA000 && address <= 0xBFFF){
-        if(extRAM){
-          uint16_t newAddress = address - 0xA000;
-          RAM[newAddress + (ramBank * 0x2000)] = data;
-          extRAM = false;
-        }
-    }else if(address >= 0xE000 && address <= 0xFDFF){
+        return;
+    }
+    else if(address >= 0xA000 && address <= 0xBFFF){
+        return;
+    }
+    else if(address >= 0xE000 && address <= 0xFDFF){
        memory[address] = data;
        write(address - 0x2000, data);
-    }else if(address >= 0xFEA0 && address <= 0xFEFF){
-       //don't write here the gameboy will get mad
+    }
+    else if(address >= 0xFEA0 && address <= 0xFEFF){
        return;
-    }else if(address == 0xFF04){
-      //writing to the divider register resets it to 0
+    }
+    else if(address == 0xFF04){
       memory[address] = 0x00;
-    }else if(address == 0xFF07){
-      int prev_freq = input_clock;
-      memory[address] = data;
-      
-      check_freq();
-      int new_freq = input_clock;
-      
-      if(new_freq != prev_freq){
-        set_freq();
-      }
-    }else if(address == 0xFF44){
-       //all writes to the scanline will reset the value
+    }
+    else if(address == 0xFF44){
        memory[address] = 0;
-    }else if(address == 0xFF46){
+    }
+    else if(address == 0xFF46){
        DMA(data);
     }else{
        memory[address] = data;
     }
 }
 
+/*!
+ *When the address 0xFF00 is read by the emulator it will jump to this method.
+ *The method is responsible for checking which type of inputs we will accept as input.
+ *There are two sets of inputs:
+ *
+ *Directional inputs(left, right, down, up)
+ *
+ *Button inputs (A,B, Start, Select)
+ *
+ *two global boolean values (direction, button) are used to identify which input type is accepted. Their values
+ *are determined by the 4th and 5th bit in 0xFF00. The method then processes what button was pressed by the
+ *buttons array and then stores the change in bits into 0xFF00. It also checks if an input interrupt has
+ *occured.
+ */
 void CPU::input(){
   bitset<8> input(memory[0xFF00]);
   direction = input.test(4);
@@ -208,25 +225,12 @@ if(!direction){
   
 }
 
+
 void CPU::update_timers(){
-  bitset<8> TAC(read(0xFF07));
   div_inc();
-  if(!TAC.test(2)) return;
-  timer_tresh -= timing;
-  if(timer_tresh <= 0){
-    check_freq();
-    set_freq();
-    
-    if(read(0xFF05) >= 0xFF){
-      write(0xFF05, read(0xFF06));
-      //call an interrupt
-      request_interrupt(2);
-    }else{
-      write(0xFF05, read(0xFF05) + 1);
-    }
-  }
 }
 
+//! increments the divider timer register every 256 clock cycles
 void CPU::div_inc(){
   div_counter += timing;
   
@@ -236,36 +240,19 @@ void CPU::div_inc(){
   }
 }
 
-
-void CPU::check_freq(){
-  bitset<8> TAC(read(0xFF07));
-  
-  if(!TAC.test(0) && !TAC.test(1)) input_clock = 0;
-  else if(TAC.test(0) && !TAC.test(1)) input_clock = 1;
-  else if(!TAC.test(0) && TAC.test(1)) input_clock = 2;
-  else input_clock = 3;
-}
-
-void CPU::set_freq(){
-  switch(input_clock){
-    case 0:
-      timer_tresh = 1024;
-    break;
-  
-    case 1:
-      timer_tresh = 16;
-    break;
-  
-    case 2:
-      timer_tresh = 64;
-    break;
-  
-    case 3:
-      timer_tresh = 256;
-    break;
-  } 
-}
-
+/*!
+ *@param req  the request number that is used to identify what interrupt needs to be processed.
+ *
+ *0: vertical blank interrupt
+ *
+ *1: LCDC status interrupt
+ *
+ *2: Timer interrupt
+ *
+ *3: Serial transfer interrupt
+ *
+ *4: Input interrupt
+ */
 void CPU::request_interrupt(int req){
   bitset<8> IF (read(0xFF0F));
   IF.set(req);
@@ -333,35 +320,15 @@ void CPU::execute_interrupt(int req){
   }
 }
 
-void CPU::changeBank(uint16_t address, uint8_t data){
-  if(address <= 0x1FFF){
-      uint8_t value = data & 0x0F;
-      if(value == 0x0A) extRAM = true;
-      else extRAM = false;
-    }else if(address >= 0x2000 && address <= 0x3FFF){
-      lower_rom_bank = data & 0x1F;
-      
-      if(lower_rom_bank == 0x00){
-        lower_rom_bank++;
-      }
-      
-    }else if(address >= 0x4000 && address <= 0x5FFF){
-        upper_banknum = data & 0x03;
-        
-    }else if(address >=0x6000 && address <= 0x7FFF){
-        bankmode = data & 0x01;
-    }
-}
-    
-
-
-//A method for the GPU which increments the scaline value by 1
 void CPU::increment_scanline(){
    memory[0xFF44]++;
 }
 
+/*!
+ *The method will load the byte data for the nintendo logo
+ *and the cheksum values found in the bios data.
+ */
 void CPU::load_bios(){
- //these values in memory hold the nintendo logo
    memory[0x104] = 0xce;
    memory[0x105] = 0xed;
    memory[0x106] = 0x66;
@@ -415,21 +382,8 @@ void CPU::load_bios(){
    
 }
 
-void CPU::checkBank(){
-  if(ROM[0x147] == 1 || ROM[0x147] == 2 || ROM[0x147] == 3){
-    romBank = 0;
-    ramBank = 0;
-    lower_rom_bank = 0x01;
-    upper_banknum = 0x00;
-    bankmode = 0x00;
-    MBC = true;
-  }else{
-    MBC = false;
-  }
-}
 
 
-//load the game into memory
 bool CPU::loadGame(const char* filename){
     clearMemory();
     ifstream rom(filename, ios::in | ios::binary | ios::ate);
@@ -439,23 +393,21 @@ bool CPU::loadGame(const char* filename){
     
     
     if (rom.read(buffer.data(), size)){
+      
       for (int i = 0; i <= buffer.size(); i++) {
-      	ROM[i] = buffer[i];
+      	memory[i] = buffer[i];
       }
-    } else {
+      
+    }else {
         printf("Couldn't load file");
         return false;
-      }
-    rom.close();
-    
-    for(int i = 0; i < 0x8000; i++){
-        memory[i] = ROM[i];
     }
+    rom.close();
+
     
     if(bios) load_bios();
     else initialize();
     
-    checkBank();
     return true;
 }
 
@@ -468,13 +420,22 @@ void CPU::DMA(uint8_t data){
    }
 }
 
-/*set, unset, check, or flip the flag value given in f
- * 7 = Z flag
- * 6 = N flag
- * 5 = HC flag
- * 4 = C flag
+/** @defgroup flags Flag Control Group
+ * This group is responisble for changing flag values.
+ * They all use the same parameter to update the value.
+ * 
+ * @param f The bit value in the flag register that needs to be changed.
+ *
+ * 7: Z - Zero flag
+ * 
+ * 6: N - Negative flag
+ * 
+ * 5: H - Half Carry flag
+ * 
+ * 4: C - Carry flag
+ *
+ * @{
  */
-
 void CPU::set_flag(int f){
    bitset<8> flag(AF.low);
    flag.set(f);
@@ -503,6 +464,8 @@ void CPU::flip_flag(int f){
     AF.low = flag.to_ulong();
 }
 
+/** @} */ // end of flags
+
 void CPU::set_pre_flags(uint8_t &val){
    unset_flag(6);
    unset_flag(5);
@@ -518,12 +481,10 @@ void CPU::set_unpre_flags(){
    unset_flag(5);
 }
 
-//loads an 8-bit register into another
 void CPU::op_8bit_load(uint8_t &r1, uint8_t r2){
     r1 = r2;
 }
 
-//loads a 16-bit register into another
 void CPU::op_16bit_load(Register &r){
     r.low = read(PC.full + 1);
     r.high = read(PC.full + 2);
@@ -559,8 +520,8 @@ void CPU::op_dec(uint8_t &val){
   else unset_flag(7);
 }
 
-//adds an 8-bit value to the A register
- void CPU::op_8bit_add(uint8_t v){
+void CPU::op_8bit_add(uint8_t v){
+     //used for carry operations
      int c = 0;
      if(carrying && check_flag(4)){
         c = 1;
@@ -586,11 +547,11 @@ void CPU::op_dec(uint8_t &val){
      } else {
        unset_flag(7);
      }
- }
+}
  
 
-//subtracts an 8-bit value from the A register
- void CPU::op_8bit_subtract(uint8_t s){
+
+void CPU::op_8bit_subtract(uint8_t s){
     int c = 0;
     if(carrying && check_flag(4)){
         c = 1;
@@ -619,11 +580,11 @@ void CPU::op_dec(uint8_t &val){
     }
     
     
- }
+}
  
 
-//bitwise and an 8-bit value with the A register
- void CPU::op_8bit_and(uint8_t s){
+
+void CPU::op_8bit_and(uint8_t s){
     unset_flag(6);
     unset_flag(4); 
     set_flag(5);
@@ -635,10 +596,10 @@ void CPU::op_dec(uint8_t &val){
     }else {
       unset_flag(7);
     }
- }
+}
  
-//bitwise or an 8-bit value with the A register
- void CPU::op_8bit_or(uint8_t s){
+
+void CPU::op_8bit_or(uint8_t s){
     unset_flag(6);
     unset_flag(4);
     unset_flag(5);
@@ -651,10 +612,10 @@ void CPU::op_dec(uint8_t &val){
     }else {
       unset_flag(7);
     }
- }
+}
  
-//xor an 8-bit value with the A register
- void CPU::op_8bit_xor(uint8_t s){
+
+void CPU::op_8bit_xor(uint8_t s){
     unset_flag(6);
     unset_flag(4);
     unset_flag(5);
@@ -666,10 +627,10 @@ void CPU::op_dec(uint8_t &val){
     }else {
       unset_flag(7);
     }
- }
+}
  
-//compares A with an 8-bit value
- void CPU::op_8bit_compare(uint8_t s){
+
+void CPU::op_8bit_compare(uint8_t s){
     set_flag(6);
     
     if(AF.high == s){
@@ -690,11 +651,10 @@ void CPU::op_dec(uint8_t &val){
       unset_flag(4);
     }
     
-    
 }
  
-//adds a 16-bit value to the HL register
- void CPU::op_16bit_add(uint16_t& r1, uint16_t r2){
+
+void CPU::op_16bit_add(uint16_t& r1, uint16_t r2){
     unset_flag(6);
     if((((r1 & 0xfff) + (r2 & 0xfff)) & 0x1000) == 0x1000){
        set_flag(5);
@@ -711,21 +671,21 @@ void CPU::op_dec(uint8_t &val){
    r1 += r2;
 }
  
-//Have the PC jump to the value specified in the next 2 bytes in memory
- void CPU::op_jump(){
+
+void CPU::op_jump(){
       Register nn;
       nn.low = read(PC.full + 1);
       nn.high = read(PC.full + 2);
       PC.full += 3;
       PC.full = nn.full;
- }
+}
  
  
-//Have the PC jump to the sum of it's original value and a signed integer
- void CPU::op_jump_signed(int8_t e){
+
+void CPU::op_jump_signed(int8_t e){
       PC.full += 2;
       PC.full += e;
- }
+}
  
 void CPU::op_rotate_A(){
     bitset<8> A(AF.high);
@@ -752,8 +712,9 @@ void CPU::op_rotate_A(){
     AF.high = A.to_ulong();
     AF.low = F.to_ulong();  
 }
-//rotate the bits in an 8-bit value
- void CPU::op_rotate(uint8_t &val){
+
+
+void CPU::op_rotate(uint8_t &val){
      bitset<8> bit(val);
      bitset<8> flag(AF.low);
      bool temp;
@@ -778,12 +739,9 @@ void CPU::op_rotate_A(){
      
      val = bit.to_ulong();
      AF.low = flag.to_ulong();
- }
+}
  
- 
- 
-//shift the bits in an 8-bit value
- void CPU::op_shift(uint8_t &val){
+void CPU::op_shift(uint8_t &val){
     bitset<8> bit(val);
     bitset<8> flag(AF.low);
     bool temp = bit[7];
@@ -806,10 +764,9 @@ void CPU::op_rotate_A(){
     val = bit.to_ulong();
     AF.low = flag.to_ulong();
     set_pre_flags(val);
- }
+}
  
-//swap the lower bit values with the higer bit values
- void CPU::op_swap(uint8_t &val){
+void CPU::op_swap(uint8_t &val){
     bitset<8> bit(val);
     unset_flag(6);
     unset_flag(5);
@@ -822,10 +779,10 @@ void CPU::op_rotate_A(){
     }else{
        unset_flag(7);
     }
- }
+}
  
-//check if a bit is set
- void CPU::op_bit(int b, uint8_t &val){
+
+void CPU::op_bit(int b, uint8_t &val){
     bitset<8> bit(val);
     unset_flag(6);
     set_flag(5);
@@ -834,48 +791,46 @@ void CPU::op_rotate_A(){
     }else{
        set_flag(7);
     }
- }
+}
  
-//set a specific bit
- void CPU::op_set(int b, uint8_t &val){
+void CPU::op_set(int b, uint8_t &val){
     bitset<8> bit(val);
     bit.set(b);
     val = bit.to_ulong();
- }
+}
  
-//unset a specfic bit
- void CPU::op_reset(int b, uint8_t &val){
+void CPU::op_reset(int b, uint8_t &val){
    bitset<8> bit(val);
    bit.reset(b);
    val = bit.to_ulong();
- }
+}
  
- void CPU::op_call(){
+void CPU::op_call(){
      Register nn;
      op_16bit_load(nn);
      PC.full += 3;
      op_push(PC);
      PC = nn;
- }
+}
  
- void CPU::op_return(){
+void CPU::op_return(){
      op_pop(PC); 
- }
+}
  
- void CPU::op_restart(uint8_t p){
+void CPU::op_restart(uint8_t p){
      PC.full++;
      op_push(PC);
      PC.high = 0x00;
      PC.low = p;
- }
+}
  
- void CPU::op_push(Register qq){
+void CPU::op_push(Register qq){
     write(SP.full -1, qq.high);
     write(SP.full -2, qq.low);
     SP.full -= 2;
- }
+}
  
- void CPU::op_pop(Register &qq){
+void CPU::op_pop(Register &qq){
     qq.low = read(SP.full);
     qq.high = read(SP.full + 1);
     
@@ -884,9 +839,9 @@ void CPU::op_rotate_A(){
     }
     
     SP.full += 2;
- }
+}
  
- void CPU::op_DAA(){
+void CPU::op_DAA(){
      if(!check_flag(6)){
          if(check_flag(4) || (AF.high > 0x99)){
             AF.high += 0x60;
@@ -917,15 +872,15 @@ void CPU::op_rotate_A(){
      
      unset_flag(5);
      
- }
+}
  
- void CPU::op_cpl(){
+void CPU::op_cpl(){
       set_flag(6);
       set_flag(5);
       bitset<8> A(AF.high);
       A.flip();
       AF.high = A.to_ulong();
- }
+}
  
 uint16_t CPU::get_AF(){
    return AF.full;
@@ -1003,25 +958,6 @@ bool CPU::get_halt(){
   return halt;
 }
 
-uint8_t CPU::get_rombank(){
-  return romBank;
-}
-
-uint8_t CPU::get_rambank(){
-  return ramBank;
-}
-
-uint8_t CPU::get_lowerbank(){
-  return lower_rom_bank;
-}
-
-uint8_t CPU::get_upperbank(){
-  return upper_banknum;
-}
-
-uint8_t CPU::get_bankmode(){
-  return bankmode;
-}
 
  
  

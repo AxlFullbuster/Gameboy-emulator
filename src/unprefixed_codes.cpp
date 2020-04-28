@@ -2,6 +2,72 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/*!
+ *This is a list of all the unprefixed instrcutions executed in this method:
+ *
+ *NOP: A no operation instruction which increments the PC by 1 and adds 4 cycles.
+ *
+ *LD: The load instruction, it can load two 8-bit integers or two 16-bit integers.
+ *
+ *PUSH: Pushes the content in a register onto the stack.
+ *
+ *POP: Pops the content in the memory stack into a register.
+ *
+ *ADD: Adds the content of an 8-bit register to register A. Can also be used to add two 16-bit integers
+ *
+ *ADC: Similar to ADD but will add 1 depending on the value of the carry flag.
+ *
+ *SUB: Subtracts the content of an 8-bit register from register A.
+ *
+ *SBC: Similar to SUB but will subtract 1 depending on the value of the carry flag.
+ *
+ *AND: Does a bitwise and operation on an 8-bit register and register A.
+ *
+ *OR: Does a bitwise or operation on an 8-bit register and register A.
+ *
+ *XOR: Does a bitwise xor operation on an 8-bit register and register A.
+ *
+ *CP: Compares the content of an 8-bit integer and register A and if they're equal set the Negative flag.
+ *
+ *INC: Increments the value by 1.
+ *
+ *DEC: Decrements the value by 1.
+ *
+ *JP: Has the Program Counter jump to a certain place in memory. It can be restriced to only allow a jump if a specific condition is met.
+ *These conditions can be if certain flag values are set or unset.
+ *Example: JP NZ u16 - Jump to the value in memory specified by the immediate 16-bit integer if the zero flag is unset.
+ *
+ *JR: Has the Program Counter jump to a certain place in memory. Which is specified by a signed 8-bit value. It can also be restriced
+ *to only jump if a condition is met. These condition are similar to the ones in the JP instruction.
+ *
+ *CALL: Has the Program Counter jump to a certain place in memory. But before that happens we increment the PC's value by 3 and push it onto
+ *the stack. Can be restricted to perform the operation if conditions are met, which are similar to the ones in the JP instruction.
+ *
+ *RET: Pops the value in the stack into the Program Counter. Can be restricted by conditions similar to the ones in the JP instruction.
+ *
+ *RETI: Similar to the RET instruction but it also sets the Interrupt Master Enable flag(IME) to 1, enabling interrupts.
+ *
+ *RST: Pushes the values of the PC + 1 onto the stack and sets it's high byte to 0, then sets its low byte to one of these values:
+ *0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38.
+ *
+ *DAA: Performs the DAA instruction, see the "Gameboy Programming Manual" in the references section of the README for a proper explanation.
+ *
+ *CPL: Takes the one's compliment of the A register.
+ *
+ *CFF: Flips the carry flag.
+ *
+ *SCF: Sets the carry flag.
+ *
+ *DI: Resets the Interrupt Master Enable flag(IME) to 0, disabling interrupts.
+ *
+ *EI: Resets the Interrupt Master Enable flag(IME) to 1, enabling interrupts.
+ *
+ *HALT: Conducts the HALT instruction, see the "Gameboy Programming Manual" in the references section of the README for a proper explanation.
+ *
+ *STOP: Conducts the STOP instruction, it is not implemented in this emulator. It operates as a NOP instruction.
+ *
+ *Note that it also does rotate operations for the A register, see the documentation for decode2 for a description on how it works.
+ */
 void CPU::decode1(uint8_t opcode){
     switch(opcode){
         case 0x00: // NOP 
