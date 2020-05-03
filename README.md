@@ -1,19 +1,19 @@
 # Information  
 This project focuses on creating a Gameboy emulator.
 
-The emulator uses SDL for it's display and input, and is written in C++.  
+The emulator uses SDL for it's display and input, ImGui for debugging information, and is written in C++.  
 
 The goal of this project is to create an emulator that can run games somewhat accurately, and to learn about CPU design.  
 
-There are currently no plans to emulate sound and memory banking past the first type.    
+There are currently no plans to emulate sound and memory banking past the first type.
 
 # Current Progress  
-Currently debugging timer and MBC switch.
+Completed for the time being. Check "Issues" to see what is not implemented.
 
 # Issues
 ### Memory Banking
-The MBC switch is currently not working correctly and as of this commit only these 2 roms run on the emulator without issue:
-"Tetris", Blargg's "cpu_instrs".
+The MBC switch is currently not working correctly and as of this commit the emulator can only run "Tetris"
+without issues.  
 
 The roms that are not running correctly are the following:
 "The Amazing SpiderMan", "Aladdin", "Zelda Link's Awakening".
@@ -21,6 +21,19 @@ The roms that are not running correctly are the following:
 ### Timer
 The Timer is also not fully implemented due to issues with TIMA, TMA, and TAC registers. The DIV register is also not
 correct according to test roms. But is able to run well enough for Tetris to randomize it's blocks.
+
+# Documentation
+The documentation of this code was written with Doxygen in mind. A doxyfile is provided if you would like to see it,
+please see [Doxygen's](http://www.doxygen.nl/manual/index.html) documentation for installing the program and getting it
+to run.
+
+# Controls
+This is the current key mapping for the emulator:  
+A - Z key.  
+B - X key.  
+Start - RightShift key.  
+Select - Space key.  
+Directional Input - Directional Keys.  
 
 # References/Resources    
 [Gameboy Development Manual Version 1.1](https://archive.org/details/GameBoyProgManVer1.1)  

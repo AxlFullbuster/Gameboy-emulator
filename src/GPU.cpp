@@ -157,9 +157,7 @@ void GPU::draw_scanline(){
     }
 }
 
-/* gets the bit value of a specific position in
- * a byte variable.
- */
+
 int GPU::getBit(uint8_t byte, int pos){
     int bit;
     pos = 7 - (pos % 8);
@@ -168,9 +166,7 @@ int GPU::getBit(uint8_t byte, int pos){
     return bit;
 }
 
-/*return a decimal value depending on the values
- *of the 2 bits given in the function
- */
+
 int GPU::getDecimal(int high, int low){
     if(high == 0 && low == 0) return 0;
     else if(high == 0 && low == 1) return 1;
@@ -178,7 +174,17 @@ int GPU::getDecimal(int high, int low){
     else return 3;
 }
 
-//gets the pixel color data from 2 bytes passed in the function
+/*! The method uses the two methods "getBit" and "getDecimal"
+ *to decode a color value that will represent one of the 4
+ *colors used in this emulator.
+ *
+ *Color = 0 - The color is white.
+ *Color = 1 - The color is light grey.
+ *Color = 2 - The color is dark grey.
+ *Color = 3 - The color is black.
+ *
+ *This is the color that is put on the title when it's rendered on the screen.
+ */
 void GPU::getColor(uint8_t byte1, uint8_t byte2, int pos){
     
     /*get the bit values from a specific position
@@ -261,7 +267,7 @@ void GPU::getColor(uint8_t byte1, uint8_t byte2, int pos){
     }
 }
 
-//gets the tile positions from the memory map and stores the data in gfx
+
 void GPU::draw_tiles(){
     //tiles use the background tile data so set bgColor to true
     bgColor = true;
@@ -395,7 +401,7 @@ void GPU::draw_tiles(){
     bgColor = false;
 }
 
-//fetches sprite data from memory
+
 void GPU::draw_sprites(){
     //y size holds the height of a sprite
     uint8_t ysize;
@@ -411,7 +417,7 @@ void GPU::draw_sprites(){
     
    
     /*the gameboy can display up to 40 sprites so
-     *we'll need loop over the sprite attribute table to get all
+     *we'll need to loop over the sprite attribute table to get all
      *the wonderfully drawn pixels.
      */
     for(int i = 0; i < 40; i++){
@@ -425,9 +431,13 @@ void GPU::draw_sprites(){
         uint8_t tiledata = emu.read(0xFE00 + index + 2);
         uint8_t atri = emu.read(0xFE00 + index + 3);
         
+        /*We then calculate how the sprites will be displayed on the screen
+         *by checking bit values found in the sprite attribute table.
+         */
         bitset<8> attributes(atri);
         bool flipY = attributes.test(6);
         bool flipX = attributes.test(5);
+        
         
         if((yCoordinate >= ypos) && (yCoordinate < (ypos + ysize))){
             int line = yCoordinate - ypos;
@@ -441,6 +451,7 @@ void GPU::draw_sprites(){
             uint8_t byte1 = emu.read(address);
             uint8_t byte2 = emu.read(address + 1);
             
+            //Now we get color data for the sprite
             for(int j = 0; j < 8; j++){
                 int color = j;
                 
@@ -448,6 +459,7 @@ void GPU::draw_sprites(){
                     color = 7 - j;
                 }
                 
+                //Check which object palette we are using
                 if(attributes.test(4)){
                     obj0 = true;
                     obj1 = false;
@@ -460,6 +472,10 @@ void GPU::draw_sprites(){
                 int xpix = j;
                 int pixel = xpos + xpix;
                  
+                
+                /* Once we have all of the correct values
+                 * we store them into the gfx array
+                 */
                 gfx[pixel][yCoordinate][0] = red;
                 gfx[pixel][yCoordinate][1] = green;
                 gfx[pixel][yCoordinate][2] = blue;
@@ -469,7 +485,6 @@ void GPU::draw_sprites(){
 }
 
 
-//draw the display onto the screen
 void GPU::draw_display(){
     //draw the color data stored in gfx onto the screen
     SDL_Rect pixel;
@@ -572,10 +587,6 @@ void GPU::draw_debugger(){
     SDL_Delay(10);
 }
 
-
-void GPU::input(){
-    //do nothing for now
-}
 
 //initialize the SDL window
 bool GPU::init(){
